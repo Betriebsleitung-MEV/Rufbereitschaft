@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ereignismanagement – Workflow (EL/RB)</title>
+  <title>Ereignismanagement – Workflow (Rufbereitschaft)</title>
   <style>
     body{font-family:Arial,sans-serif;background:#f5f5f5;padding:24px}
     .app{max-width:1500px;margin:0 auto;background:#fff;padding:22px 24px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
@@ -169,16 +169,48 @@
       .map{min-height:260px;}
     }
 
+
+    /* Auswahl-Overlay */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:9999;display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box}
+    .overlay-box{background:#fff;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.24);width:min(920px,100%);max-height:86vh;overflow:auto;padding:16px}
+    .load-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .load-item{border:1px solid #ddd;border-radius:12px;padding:12px;background:#f9f9f9;cursor:pointer}
+    .load-item:hover{background:#dff5e1;border-color:#6bc28a}
+    .load-title{font-weight:900}
+    .load-meta{font-size:12px;color:#666;margin-top:4px;line-height:1.35}
+    .load-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+
+
+    /* Ereigniserfassung-Übernahme */
+    .source-readonly{border-color:#4d73ff;background:#f7f9ff}
+    .source-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px}
+    .source-item{background:#fff;border:1px solid #d7defd;border-radius:10px;padding:10px;min-width:0}
+    .source-label{font-size:11px;color:#555;font-weight:900;text-transform:uppercase;letter-spacing:.02em;margin-bottom:4px}
+    .source-value{font-size:14px;font-weight:800;white-space:pre-wrap;word-break:break-word;line-height:1.35}
+    .source-empty{color:#888;font-weight:700}
+    .source-chip{display:inline-block;margin:2px 4px 2px 0;padding:5px 8px;border-radius:999px;background:#eef2ff;border:1px solid #cfd8ff;font-weight:900;font-size:12px}
+    .source-chip.active{background:#dff5e1;border-color:#6bc28a}
+    .source-chip.warn{background:#fff1f1;border-color:#e53935}
+
   </style>
 </head>
 <body>
   <div class="app">
     <div class="topbar">
-      <h1>Ereignismanagement – Workflow (EL/RB)</h1>
+      <h1>Ereignismanagement – Workflow (Rufbereitschaft)</h1>
       <div class="top-actions">
         <button class="btn-secondary" type="button" id="btnLoad">Vorfall laden</button>
         <button class="btn-primary" type="button" id="btnSave">Speichern / Aktualisieren</button>
         <button class="btn-danger" type="button" id="btnClose">Vorfall abschliessen</button>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Daten aus Ereigniserfassung</div></div>
+    <div class="card source-readonly" id="sourceCard" style="margin-top:14px">
+      <div class="subhead" style="margin-top:0">Übernommene Meldedaten</div>
+      <div class="hint">Dieser Bereich wird beim Laden aus SharePoint automatisch aus dem PayloadJson der Ereigniserfassung befüllt. Die Bearbeitung darunter bleibt Rufbereitschafts-Workflow.</div>
+      <div id="sourceSummary" class="source-grid">
+        <div class="source-item"><div class="source-label">Status</div><div class="source-value source-empty">Noch kein Ereignis geladen.</div></div>
       </div>
     </div>
 
@@ -190,21 +222,20 @@
         <div class="grid row-3">
           <div class="field">
             <div style="font-weight:900;margin-bottom:6px">IncidentId</div>
-            <input id="incidentId" placeholder="INC-2026-000123" value="INC-2026-000123" />
+            <input id="incidentId" placeholder="EVT-..." value="" />
             <div class="hint">Eindeutiger Schlüssel (vom Flow)</div>
           </div>
           <div class="field">
             <div style="font-weight:900;margin-bottom:6px">Ereignis</div>
-            <input id="ereignis" value="Rangierunfall" />
+            <input id="ereignis" value="" />
             <div class="hint">Read-only möglich, kommt aus Meldung</div>
           </div>
           <div class="field">
-            <div style="font-weight:900;margin-bottom:6px">Rolle (wer bearbeitet jetzt)</div>
-            <div class="actor" id="actorSwitch">
-              <div class="pill active" data-actor="EL">Einsatzleitung (EL)</div>
-              <div class="pill" data-actor="RB">Rufbereitschaft (RB)</div>
-            </div>
-            <div class="hint">Status- und Journal-Einträge werden mit dieser Rolle geloggt.</div>
+            <div style="font-weight:900;margin-bottom:6px">Bearbeiter Rufbereitschaft</div>
+            <select id="rbBearbeiterSelect">
+              <option value="">Rufbereitschaft wird geladen …</option>
+            </select>
+            <div class="hint" id="rbBearbeiterInfo">Quelle: assets/rufbereitschaft_plan.json + assets/mitarbeiter.json</div>
           </div>
         </div>
 
@@ -219,18 +250,18 @@
           </div>
           <div class="field">
             <div style="font-weight:900;margin-bottom:6px">Start / Bahnhof</div>
-            <input id="ortStart" value="ZGO – Zug Oberwil" />
+            <input id="ortStart" value="" />
           </div>
           <div class="field">
             <div style="font-weight:900;margin-bottom:6px">Ziel / Anschluss</div>
-            <input id="ortZiel" value="OL – Oensingen" />
+            <input id="ortZiel" value="" />
           </div>
         </div>
 
         <div class="grid row-2">
           <div class="field">
             <div style="font-weight:900;margin-bottom:6px">Kurzbeschreibung</div>
-            <textarea id="summary" rows="3">Wagen entgleist im Rangierbereich. Schaden unbekannt. Kunde informiert.</textarea>
+            <textarea id="summary" rows="3"></textarea>
             <div class="hint">Kommt aus Meldung + Updates.</div>
           </div>
           <div class="field">
@@ -242,7 +273,7 @@
       </div>
 
       <div>
-        <div class="section-title" style="margin-top:0"><div>Mitarbeitende kontaktiert (EL/RB)</div></div>
+        <div class="section-title" style="margin-top:0"><div>Mitarbeitende kontaktiert (Rufbereitschaft)</div></div>
         <div class="card active" style="margin-top:14px">
           <div class="subhead" style="margin-top:0">Kontakte (schnell markieren)</div>
           <div class="chips" id="contactChips">
@@ -276,7 +307,7 @@
           </div>
         </div>
 
-        <div class="section-title"><div>Status (EL/RB)</div></div>
+        <div class="section-title"><div>Status (Rufbereitschaft)</div></div>
         <div class="card" style="margin-top:14px" id="statusCard">
           <div class="subhead" style="margin-top:0">Schnellstatus</div>
           <div class="pillars" id="statusPillars">
@@ -321,7 +352,7 @@
 
           <div class="field" style="margin-top:12px">
             <div style="font-weight:900;margin-bottom:6px">Aktueller Status (Text)</div>
-            <input id="statusText" value="RB ist informiert, erste Abklärungen laufen." />
+            <input id="statusText" value="" />
             <div class="hint">Kommt in SharePoint Spalte "StatusText".</div>
           </div>
         </div>
@@ -452,7 +483,7 @@
     </div>
 
     <div class="foot">
-      <div class="hint">v4: Status ↔ Nachfassen gekoppelt + Nachfassen-Ampel.</div>
+      <div class="hint">v5: Alle möglichen Felder aus der Ereigniserfassung werden übernommen und angezeigt.</div>
       <div class="mono">GitHub Pages ready (statisch) · später: GetIncident/UpdateIncident via Power Automate</div>
     </div>
   </div>
@@ -463,7 +494,8 @@
     const contactChips = document.getElementById('contactChips');
     const payloadPreview = document.getElementById('payloadPreview');
     const syncInfo = document.getElementById('syncInfo');
-    const actorSwitch = document.getElementById('actorSwitch');
+    const rbBearbeiterSelect = document.getElementById('rbBearbeiterSelect');
+    const rbBearbeiterInfo = document.getElementById('rbBearbeiterInfo');
     const timeline = document.getElementById('timeline');
 
     const followLast = document.getElementById('followLast');
@@ -474,7 +506,9 @@
     const btnFollowResolve = document.getElementById('btnFollowResolve');
 
     const state = {
-      actor: 'EL',
+      actor: 'RB',
+      bearbeiter: null,
+      sourceEreignis: null,
       timeline: [],
       recommended: [
         {key:'KUN', label:'KUN – Kunde informieren', status:'offen'},
@@ -643,15 +677,25 @@
       renderPreview();
     });
 
-    // Actor switch
-    actorSwitch.addEventListener('click', (e)=>{
-      const pill = e.target.closest('.pill');
-      if(!pill) return;
-      state.actor = pill.dataset.actor;
-      [...actorSwitch.querySelectorAll('.pill')].forEach(p=>p.classList.toggle('active', p===pill));
-      addTimeline('actor', 'Bearbeitung gewechselt', `Aktuell: ${state.actor}`, 'info');
+    // Bearbeiter Rufbereitschaft
+    function setRbBearbeiterFromSelect(silent){
+      const opt = rbBearbeiterSelect?.selectedOptions?.[0];
+      const name = opt?.dataset?.name || '';
+      const mail = opt?.dataset?.mail || '';
+      const tel = opt?.dataset?.tel || '';
+      if(name){
+        state.bearbeiter = { rolle:'Rufbereitschaft', name, mail, tel };
+        state.actor = `RB – ${name}`;
+        if(rbBearbeiterInfo) rbBearbeiterInfo.textContent = [mail, tel].filter(Boolean).join(' · ') || 'Rufbereitschaft';
+        if(!silent) addTimeline('actor', 'Bearbeiter Rufbereitschaft gewählt', state.actor, 'info');
+      } else {
+        state.bearbeiter = { rolle:'Rufbereitschaft' };
+        state.actor = 'RB';
+        if(rbBearbeiterInfo) rbBearbeiterInfo.textContent = 'Quelle: assets/rufbereitschaft_plan.json + assets/mitarbeiter.json';
+      }
       renderPreview();
-    });
+    }
+    rbBearbeiterSelect?.addEventListener('change', ()=> setRbBearbeiterFromSelect(false));
 
     // Status pillars (manuell)
     statusPillars.addEventListener('click', (e)=>{
@@ -731,6 +775,8 @@
       return {
         incidentId: document.getElementById('incidentId').value.trim(),
         actor: state.actor,
+        bearbeiter: state.bearbeiter,
+        sourceEreignis: state.sourceEreignis || null,
         status: activeStatus(),
         statusText: document.getElementById('statusText').value.trim(),
         ort: {
@@ -776,7 +822,7 @@
           ampelfarbe: followLamp.classList.contains('red') ? 'rot' : followLamp.classList.contains('yellow') ? 'gelb' : 'gruen'
         },
         timeline: state.timeline,
-        meta: { erzeugtAm: new Date().toISOString(), client: 'workflow_mockup_el_rb_v4' }
+        meta: { erzeugtAm: new Date().toISOString(), client: 'workflow_rufbereitschaft_mobile_v5_fullmapping' }
       };
     }
 
@@ -842,12 +888,7 @@
 
     // Init baseline
     function initBaseline(){
-      state.timeline = [
-        {t:new Date(Date.now()-45*60*1000).toISOString(), actor:'EL', cls:'done', kind:'create', text:'Meldung erfasst (Einsatzleitung)', sub:'ZGO → OL · Fotos: 2'},
-        {t:new Date(Date.now()-37*60*1000).toISOString(), actor:'EL', cls:'done', kind:'kontakt', text:'Kunde kontaktiert', sub:'Telefon / Mail (Demo)'},
-        {t:new Date(Date.now()-32*60*1000).toISOString(), actor:'EL', cls:'done', kind:'kontakt', text:'RB informiert', sub:'Übernahme bestätigt'},
-        {t:new Date(Date.now()-20*60*1000).toISOString(), actor:'RB', cls:'info', kind:'status', text:'Status: In Bearbeitung', sub:'Erste Abklärungen laufen'}
-      ];
+      state.timeline = [];
     }
 
     // Fix for accidental True in JS from python generation
@@ -888,6 +929,8 @@
       const SAVE_FLOW_URL = 'https://defaulte3d2e8defe3548eaa78972c4a2acf9.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7659dd88f4f440319ce452a19d40a2bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JbYc2mpIVfIuF5mQmKcZalNY8N2tDSyf2xqbgcvKeCM';
       const LOAD_FLOW_URL = 'https://defaulte3d2e8defe3548eaa78972c4a2acf9.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9705f2ddfe9844a890b27132e0f9978f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5iKFry3jecsa9poNjLJ2V2ob4EdCnzGE-E6MmdGNTUM';
       const MAP_URL = 'assets/map.svg';
+      const URL_RB_PLAN = 'assets/rufbereitschaft_plan.json';
+      const URL_STAFF = 'assets/mitarbeiter.json';
       const SAVE_ENABLED = SAVE_FLOW_URL && !SAVE_FLOW_URL.includes('HIER_DEINE_SAVE_FLOW_HTTP_URL');
       const LOAD_ENABLED = LOAD_FLOW_URL && !LOAD_FLOW_URL.includes('HIER_DEINE_LOAD_FLOW_HTTP_URL');
 
@@ -896,6 +939,71 @@
         const d = new Date();
         return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
       };
+
+      function normalizeMail(s){ return String(s||'').trim().toLowerCase(); }
+
+      async function loadRbBearbeiter(){
+        if(!rbBearbeiterSelect) return;
+        try{
+          const [rbRes, staffRes] = await Promise.all([
+            fetch(URL_RB_PLAN, {cache:'no-store'}),
+            fetch(URL_STAFF, {cache:'no-store'})
+          ]);
+          const rbPlan = await rbRes.json();
+          const staffJson = await staffRes.json();
+
+          const staffByMail = new Map();
+          const byDept = staffJson?.employeesByDepartment || {};
+          Object.entries(byDept).forEach(([dept, list])=>{
+            (Array.isArray(list) ? list : []).forEach(p=>{
+              if(!p || p.aktiv === false || !p.mail) return;
+              staffByMail.set(normalizeMail(p.mail), {...p, dept});
+            });
+          });
+
+          const peopleMap = new Map();
+          (Array.isArray(rbPlan) ? rbPlan : [])
+            .filter(x => String(x.gruppe||'').toLowerCase().includes('notfallmanagement'))
+            .forEach(x=>{
+              const mail = normalizeMail(x.mail);
+              if(!mail || peopleMap.has(mail)) return;
+              const staff = staffByMail.get(mail) || {};
+              peopleMap.set(mail, {
+                name: x.mitarbeiter || [staff.vorname, staff.nachname].filter(Boolean).join(' ') || mail,
+                mail,
+                tel: staff.tel || '',
+                mev_id: staff.mev_id || ''
+              });
+            });
+
+          const people = [...peopleMap.values()].sort((a,b)=>a.name.localeCompare(b.name,'de-CH'));
+          rbBearbeiterSelect.innerHTML = '<option value="">Bitte wählen</option>' + people.map(p =>
+            `<option value="${escapeHtml(p.mail)}" data-name="${escapeHtml(p.name)}" data-mail="${escapeHtml(p.mail)}" data-tel="${escapeHtml(p.tel)}">${escapeHtml(p.name)}</option>`
+          ).join('');
+
+          const now = new Date();
+          const current = (Array.isArray(rbPlan) ? rbPlan : []).find(x =>
+            String(x.gruppe||'').toLowerCase().includes('notfallmanagement') &&
+            now >= new Date(x.start) && now < new Date(x.ende)
+          );
+          if(current?.mail){
+            rbBearbeiterSelect.value = normalizeMail(current.mail);
+            setRbBearbeiterFromSelect(true);
+            const von = new Date(current.start).toLocaleDateString('de-CH');
+            const bis = new Date(current.ende).toLocaleDateString('de-CH');
+            if(rbBearbeiterInfo) rbBearbeiterInfo.textContent += ` · aktuell ${von} – ${bis}`;
+          } else if(people.length){
+            if(rbBearbeiterInfo) rbBearbeiterInfo.textContent = 'Bitte aktuelle Rufbereitschaft auswählen.';
+          } else {
+            rbBearbeiterSelect.innerHTML = '<option value="">Keine Rufbereitschaft gefunden</option>';
+            if(rbBearbeiterInfo) rbBearbeiterInfo.textContent = 'Keine Namen in rufbereitschaft_plan.json gefunden.';
+          }
+        }catch(err){
+          console.warn('Rufbereitschaft/Mitarbeiter konnte nicht geladen werden:', err);
+          rbBearbeiterSelect.innerHTML = '<option value="">Rufbereitschaft konnte nicht geladen werden</option>';
+          if(rbBearbeiterInfo) rbBearbeiterInfo.textContent = 'Fehler beim Laden von assets/rufbereitschaft_plan.json oder assets/mitarbeiter.json';
+        }
+      }
 
       function postJson(url, body){
         return fetch(url, {
@@ -948,11 +1056,11 @@
         payload.incidentId = id;
         payload.meta = {
           ...(payload.meta || {}),
-          schema: 'mev-workflow-el-rb-v1',
+          schema: 'mev-workflow-rb-v2',
           quelle: 'workflow_el_rb',
           ereignisId: id,
           letzteAenderung: new Date().toISOString(),
-          client: 'workflow_mockup_el_rb_v4_sharepoint'
+          client: 'workflow_rufbereitschaft_mobile_v5_fullmapping'
         };
         return payload;
       }
@@ -1013,6 +1121,61 @@
         return null;
       }
 
+      function payloadFromItem(item){
+        if(!item) return null;
+        const raw = item.payload || item.payloadJson || item.PayloadJson;
+        const payload = parseMaybeJson(raw);
+        if(payload){
+          payload.__sharepoint = {
+            itemId: item.sharepointItemId || item.ID || item.id || '',
+            title: item.title || item.Title || '',
+            ereignisId: item.ereignisId || item.EreignisId || '',
+            status: item.status || item.Status || '',
+            modified: item.modified || item.Modified || ''
+          };
+        }
+        return payload;
+      }
+
+      function openIncidentPicker(items){
+        return new Promise(resolve => {
+          const ov = document.createElement('div');
+          ov.className = 'overlay';
+          ov.innerHTML = `
+            <div class="overlay-box">
+              <div style="font-weight:900;font-size:18px;margin-bottom:10px;">Vorfall auswählen</div>
+              <input id="incidentSearch" placeholder="Suchen nach EreignisId, Titel oder Status …" autocomplete="off">
+              <div class="load-list" id="incidentList"></div>
+              <div class="load-actions"><button type="button" class="btn-secondary" id="incidentCancel">Abbrechen</button></div>
+            </div>`;
+          document.body.appendChild(ov);
+          const search = ov.querySelector('#incidentSearch');
+          const list = ov.querySelector('#incidentList');
+          const close = (val)=>{ ov.remove(); resolve(val); };
+          ov.querySelector('#incidentCancel').onclick = ()=> close(null);
+          ov.addEventListener('click', e=>{ if(e.target === ov) close(null); });
+
+          function render(){
+            const q = (search.value || '').toLowerCase().trim();
+            const filtered = (items || []).filter(it => {
+              const hay = `${it.ereignisId||''} ${it.title||''} ${it.status||''} ${it.modified||''}`.toLowerCase();
+              return !q || hay.includes(q);
+            }).slice(0, 100);
+            list.innerHTML = filtered.map((it, idx)=>{
+              const when = it.modified ? new Date(it.modified).toLocaleString('de-CH') : '';
+              return `<div class="load-item" data-idx="${idx}">
+                <div class="load-title">${escapeHtml(it.ereignisId || '—')} · ${escapeHtml(it.title || '')}</div>
+                <div class="load-meta">Status: ${escapeHtml(it.status || '—')} · geändert: ${escapeHtml(when || '—')}</div>
+              </div>`;
+            }).join('') || '<div class="hint">Keine passenden Ereignisse gefunden.</div>';
+            [...list.querySelectorAll('.load-item')].forEach((el, i)=> el.onclick = ()=> close(filtered[i]));
+          }
+          search.addEventListener('input', render);
+          render();
+          search.focus();
+        });
+      }
+
       function extractPayloadFromResponse(data, wantedId){
         // Load-Flow liefert aktuell eine Liste. Falls der Flow noch nicht filtert,
         // suchen wir hier clientseitig den passenden Eintrag nach EreignisId.
@@ -1022,23 +1185,163 @@
           if(want){
             item = data.items.find(x => String(x.ereignisId || x.EreignisId || '').trim() === want) || null;
           }
+          if(!item && want) return null;
           item = item || data.items[0];
-          const raw = item.payload || item.payloadJson || item.PayloadJson;
-          const payload = parseMaybeJson(raw);
-          if(payload){
-            payload.__sharepoint = {
-              itemId: item.sharepointItemId || item.ID || item.id || '',
-              title: item.title || item.Title || '',
-              ereignisId: item.ereignisId || item.EreignisId || '',
-              status: item.status || item.Status || '',
-              modified: item.modified || item.Modified || ''
-            };
-          }
-          return payload;
+          return payloadFromItem(item);
         }
 
         const raw = data?.payload || data?.item?.payload || data?.PayloadJson || data?.payloadJson || data?.item;
         return parseMaybeJson(raw);
+      }
+
+
+      function valOrDash(v){
+        if(v == null) return '—';
+        const s = String(v).trim();
+        return s || '—';
+      }
+
+      function personText(p){
+        if(!p) return '';
+        if(typeof p === 'string') return p;
+        const name = [p.vorname, p.nachname].filter(Boolean).join(' ') || p.name || p.mitarbeiter || '';
+        const parts = [p.typ, name, p.unternehmen, p.mail, p.tel].filter(Boolean);
+        return parts.join(' · ');
+      }
+
+      function formatDateTimeParts(d,t){
+        return [d,t].filter(Boolean).join(' ');
+      }
+
+      function formatOrtFull(o){
+        if(!o) return '';
+        const lines = [];
+        if(o.modus) lines.push('Modus: ' + o.modus);
+        if(o.bahnhof) lines.push('Bahnhof: ' + stationText(o.bahnhof));
+        if(o.zugziel) lines.push('Zugziel: ' + stationText(o.zugziel));
+        if(o.start) lines.push('Start: ' + stationText(o.start));
+        if(o.ziel) lines.push('Ziel: ' + stationText(o.ziel));
+        if(o.anschluss) lines.push('Anschluss Station: ' + stationText(o.anschluss));
+        if(o.anschlussText) lines.push('Anschluss / Gleis: ' + o.anschlussText);
+        return lines.join('\n');
+      }
+
+      function flagsHtml(flags){
+        const keys = ['EL','RB','FS','EK'];
+        return keys.map(k => `<span class="source-chip ${flags?.[k] ? 'active' : ''}">${k}: ${flags?.[k] ? 'JA' : 'nein'}</span>`).join('');
+      }
+
+      function massnahmenText(m){
+        if(!m) return '';
+        if(Array.isArray(m)) return m.map(x => `${x.key || ''} ${x.label || x.text || ''} ${x.status ? '('+x.status+')' : ''}`.trim()).join('\n');
+        if(typeof m === 'object') return Object.keys(m).filter(k => m[k]).join(', ');
+        return String(m);
+      }
+
+      function sourceItem(label, value, html=false){
+        const empty = value == null || String(value).trim() === '';
+        return `<div class="source-item"><div class="source-label">${escapeHtml(label)}</div><div class="source-value ${empty ? 'source-empty' : ''}">${empty ? '—' : (html ? value : escapeHtml(String(value)))}</div></div>`;
+      }
+
+      function renderSourceFromEreignis(payload){
+        const box = document.getElementById('sourceSummary');
+        if(!box) return;
+        if(!payload || typeof payload !== 'object'){
+          box.innerHTML = sourceItem('Status','Noch kein Ereignis geladen.');
+          return;
+        }
+        const meta = payload.meta || {};
+        const alarm = payload.alarmierung || {};
+        const ev = payload.ereignis || {};
+        const ent = payload.entscheidungen || {};
+        const zf = ev.zugfahrzeug || {};
+        const rb = ent.rufbereitschaft || {};
+        const involvierte = Array.isArray(alarm.involvierte) ? alarm.involvierte.map(personText).filter(Boolean).join('\n') : '';
+        const fotos = Array.isArray(payload.fotos) ? payload.fotos.map(f => `${f.name || 'Foto'} · ${f.type || ''} · ${f.size || 0} B`).join('\n') : '';
+        const melder = personText(alarm.melder);
+        const erfasser = personText(alarm.erfasser?.auswahl || alarm.erfasser);
+        const flags = ent.flags || {};
+        box.innerHTML = [
+          sourceItem('EreignisId', meta.ereignisId || payload.ereignisId || payload.incidentId),
+          sourceItem('Quelle / Vorgang', [meta.quelle, meta.vorgangIdDienstuebergabe].filter(Boolean).join(' · ')),
+          sourceItem('Meldung Datum / Uhrzeit', formatDateTimeParts(alarm.meldungDatum || alarm.meldung_datum, alarm.meldungUhrzeit || alarm.meldung_uhrzeit)),
+          sourceItem('Titel', meta.title),
+          sourceItem('Ereignisart / Variante', [ev.ev_text || ev.ereignisart, ev.var_text || ev.variante].filter(Boolean).join(' – ')),
+          sourceItem('Zug / Fahrzeug', [zf.modus, zf.nummer].filter(Boolean).join(': ')),
+          sourceItem('Ort vollständig', formatOrtFull(ev.ort)),
+          sourceItem('EVU / Verantwortlich', [ent.evu, ent.verantwortliches_unternehmen].filter(Boolean).join(' · ')),
+          sourceItem('Bewertung', flagsHtml(flags), true),
+          sourceItem('Rufbereitschaft laut Meldung', [rb.name, rb.mail, rb.tel, rb.zeitraum].filter(Boolean).join('\n')),
+          sourceItem('Melder', melder),
+          sourceItem('Erfasser', erfasser),
+          sourceItem('Involvierte', involvierte),
+          sourceItem('Bemerkungen Alarmierung', alarm.bemerkungen),
+          sourceItem('Bemerkungen Ereignis', ev.bemerkungen),
+          sourceItem('Empfohlene Maßnahmen', massnahmenText(ent.massnahmen_empfohlen)),
+          sourceItem('Vorgehen / Auftrag', ent.massnahmen_text),
+          sourceItem('Bemerkungen Entscheidung', ent.bemerkungen),
+          sourceItem('Fotos', fotos),
+          sourceItem('Erzeugt / geändert', [meta.erzeugtAm, meta.letzteAenderung].filter(Boolean).join('\n'))
+        ].join('');
+      }
+
+      function isEreignisPayload(payload){
+        return !!(payload && payload.ereignis && (payload.ereignis.ev_text || payload.ereignis.ereignisart || payload.entscheidungen || payload.alarmierung));
+      }
+
+      function applyEreignisPayloadToWorkflow(payload){
+        state.sourceEreignis = payload;
+        renderSourceFromEreignis(payload);
+        const meta = payload.meta || {};
+        const alarm = payload.alarmierung || {};
+        const ev = payload.ereignis || {};
+        const ent = payload.entscheidungen || {};
+        const id = meta.ereignisId || payload.ereignisId || payload.incidentId || ensureIncidentId();
+        setVal('incidentId', id);
+        setVal('ereignis', [ev.ev_text || ev.ereignisart, ev.var_text || ev.variante].filter(Boolean).join(' – '));
+        const zf = ev.zugfahrzeug || {};
+        const summaryLines = [
+          ev.bemerkungen,
+          alarm.bemerkungen ? 'Alarmierung: ' + alarm.bemerkungen : '',
+          zf.nummer ? `Zug/Fahrzeug: ${zf.modus || ''} ${zf.nummer}`.trim() : '',
+          ent.flags?.FS ? 'Fahrtstopp gemeldet.' : ''
+        ].filter(Boolean);
+        setVal('summary', summaryLines.join('\n'));
+        const o = ev.ort || {};
+        setVal('ortModus', o.modus || '');
+        if(o.modus === 'strecke'){
+          setVal('ortStart', stationText(o.start));
+          setVal('ortZiel', stationText(o.ziel));
+        }else if(o.modus === 'bahnhof'){
+          setVal('ortStart', stationText(o.bahnhof));
+          setVal('ortZiel', stationText(o.zugziel));
+        }else if(o.modus === 'anschluss'){
+          setVal('ortStart', stationText(o.anschluss));
+          setVal('ortZiel', o.anschlussText || '');
+        }else{
+          setVal('ortStart', formatOrtFull(o));
+          setVal('ortZiel', '');
+        }
+        setRecommended(ent.massnahmen_empfohlen);
+        setVal('doneNotes', ent.massnahmen_text || '');
+        setVal('leitstelle', [
+          ent.evu ? 'EVU: ' + ent.evu : '',
+          ent.verantwortliches_unternehmen ? 'Verantwortlich: ' + ent.verantwortliches_unternehmen : '',
+          ent.rufbereitschaft?.name ? 'RB laut Meldung: ' + [ent.rufbereitschaft.name, ent.rufbereitschaft.mail, ent.rufbereitschaft.tel].filter(Boolean).join(' · ') : ''
+        ].filter(Boolean).join('\n'));
+        if(Array.isArray(alarm.involvierte) && alarm.involvierte.length){
+          const first = alarm.involvierte[0];
+          const name = [first.vorname, first.nachname].filter(Boolean).join(' ') || first.name || '';
+          if(name) setVal('apName', name);
+          if(first.tel) setVal('apTel', first.tel);
+          if(first.mail && !document.getElementById('apTel').value) setVal('apTel', first.mail);
+          if(first.rolle || first.typ) setVal('apFirma', [first.rolle, first.typ].filter(Boolean).join(' · '));
+        }
+        if(ent.flags?.RB || ent.rufbereitschaft?.name) document.querySelector('#contactChips .chip2[data-key="RB"]')?.classList.add('done');
+        if(ent.evu) document.querySelector('#contactChips .chip2[data-key="EVU"]')?.classList.add('done');
+        if(ent.massnahmen_empfohlen?.KUN) document.querySelector('#contactChips .chip2[data-key="KUN"]')?.classList.add('done');
+        setVal('statusText', ent.flags?.FS ? 'Fahrtstopp aktiv / zu prüfen.' : 'Ereignismeldung übernommen, Bearbeitung durch Rufbereitschaft.');
+        addTimeline('load', 'Ereignismeldung vollständig übernommen', id, 'info');
       }
 
       function applyWorkflowPayload(payload){
@@ -1047,87 +1350,69 @@
           return;
         }
 
-        // Fall A: Payload aus dieser Workflow-App
-        setVal('incidentId', payload.incidentId || payload.meta?.ereignisId || payload.ereignisId || '');
-        setVal('ereignis', payload.ereignis || payload.ereignisText || payload.ereignis?.ev_text || payload.ereignis?.evText || '');
-        if(payload.status) applyStatus(payload.status);
-        setVal('statusText', payload.statusText || '');
-        if(payload.ort){
-          setVal('ortModus', payload.ort.modus || '');
-          setVal('ortStart', payload.ort.start || stationText(payload.ort.bahnhof) || stationText(payload.ort.startStation));
-          setVal('ortZiel', payload.ort.ziel || stationText(payload.ort.zielStation));
-        }
-        if(payload.zeiten){
-          setVal('tsKunde', payload.zeiten.kundeKontaktiert || '');
-          setVal('tsAus', payload.zeiten.ausruecken || '');
-          setVal('tsEin', payload.zeiten.eintreffen || '');
-        }
-        if(payload.kontakte){
-          setContactChips(payload.kontakte.standard);
-          setVal('freeContactName', payload.kontakte.frei?.name || '');
-          setVal('freeContactTel', payload.kontakte.frei?.tel || '');
-          setVal('freeContactOrg', payload.kontakte.frei?.org || '');
-          setVal('freeContactNote', payload.kontakte.frei?.note || '');
-        }
-        if(payload.massnahmen){
-          setRecommended(payload.massnahmen.empfohlen);
-          setVal('doneNotes', payload.massnahmen.umgesetztNotiz || '');
-        }
-        if(payload.handover){
-          setVal('handoverTo', payload.handover.to || '');
-          setVal('handoverAt', payload.handover.at || '');
-          setVal('handoverReason', payload.handover.reason || '');
-        }
-        setVal('leitstelle', payload.leitstelle || '');
-        if(payload.ansprechpartner){
-          setVal('apName', payload.ansprechpartner.name || '');
-          setVal('apTel', payload.ansprechpartner.tel || '');
-          setVal('apFirma', payload.ansprechpartner.firma || '');
-          setVal('apNotes', payload.ansprechpartner.notes || '');
-        }
-        if(payload.followup){
-          setVal('followLast', payload.followup.last || '');
-          setVal('followNext', payload.followup.next || '');
-          setVal('followNote', payload.followup.note || '');
-        }
-        if(Array.isArray(payload.timeline)){
-          state.timeline = payload.timeline;
-          renderTimeline();
+        // Workflow-Payload mit eingebetteter Originalmeldung
+        if(payload.sourceEreignis){
+          state.sourceEreignis = payload.sourceEreignis;
+          renderSourceFromEreignis(payload.sourceEreignis);
         }
 
-        // Fall B: Payload direkt aus Ereignismelde-App
-        if(payload.ereignis && (payload.ereignis.ev_text || payload.ereignis.var_text || payload.entscheidungen)){
-          setVal('incidentId', payload.meta?.ereignisId || payload.ereignisId || payload.incidentId || ensureIncidentId());
-          setVal('ereignis', [payload.ereignis.ev_text, payload.ereignis.var_text].filter(Boolean).join(' – '));
-          setVal('summary', payload.ereignis.bemerkungen || '');
-          const o = payload.ereignis.ort || {};
-          setVal('ortModus', o.modus || '');
-          if(o.modus === 'strecke'){
-            setVal('ortStart', stationText(o.start));
-            setVal('ortZiel', stationText(o.ziel));
-          }else if(o.modus === 'bahnhof'){
-            setVal('ortStart', stationText(o.bahnhof));
-            setVal('ortZiel', stationText(o.zugziel));
-          }else if(o.modus === 'anschluss'){
-            setVal('ortStart', stationText(o.anschluss));
-            setVal('ortZiel', o.anschlussText || '');
+        // Fall A: Payload aus dieser Workflow-App
+        if(!isEreignisPayload(payload) || payload.sourceEreignis){
+          setVal('incidentId', payload.incidentId || payload.meta?.ereignisId || payload.ereignisId || '');
+          setVal('ereignis', payload.ereignis || payload.ereignisText || '');
+          if(payload.status) applyStatus(payload.status);
+          setVal('statusText', payload.statusText || '');
+          if(payload.ort){
+            setVal('ortModus', payload.ort.modus || '');
+            setVal('ortStart', payload.ort.start || '');
+            setVal('ortZiel', payload.ort.ziel || '');
           }
-          setRecommended(payload.entscheidungen?.massnahmen_empfohlen);
-          setVal('doneNotes', payload.entscheidungen?.massnahmen_text || '');
-          if(payload.alarmierung?.involvierte?.length){
-            const first = payload.alarmierung.involvierte[0];
-            const name = [first.vorname, first.nachname].filter(Boolean).join(' ') || first.name || '';
-            if(name) setVal('apName', name);
-            if(first.tel) setVal('apTel', first.tel);
-            if(first.mail && !document.getElementById('apTel').value) setVal('apTel', first.mail);
+          if(payload.zeiten){
+            setVal('tsKunde', payload.zeiten.kundeKontaktiert || '');
+            setVal('tsAus', payload.zeiten.ausruecken || '');
+            setVal('tsEin', payload.zeiten.eintreffen || '');
           }
-          if(payload.entscheidungen?.rufbereitschaft?.name){
-            document.querySelector('#contactChips .chip2[data-key="RB"]')?.classList.add('done');
+          if(payload.kontakte){
+            setContactChips(payload.kontakte.standard);
+            setVal('freeContactName', payload.kontakte.frei?.name || '');
+            setVal('freeContactTel', payload.kontakte.frei?.tel || '');
+            setVal('freeContactOrg', payload.kontakte.frei?.org || '');
+            setVal('freeContactNote', payload.kontakte.frei?.note || '');
           }
-          if(payload.entscheidungen?.evu){
-            document.querySelector('#contactChips .chip2[data-key="EVU"]')?.classList.add('done');
+          if(payload.massnahmen){
+            setRecommended(payload.massnahmen.empfohlen);
+            setVal('doneNotes', payload.massnahmen.umgesetztNotiz || '');
           }
-          addTimeline('load', 'Ereignismeldung übernommen', payload.meta?.ereignisId || payload.__sharepoint?.ereignisId || '', 'info');
+          if(payload.handover){
+            setVal('handoverTo', payload.handover.to || '');
+            setVal('handoverAt', payload.handover.at || '');
+            setVal('handoverReason', payload.handover.reason || '');
+          }
+          setVal('leitstelle', payload.leitstelle || '');
+          if(payload.ansprechpartner){
+            setVal('apName', payload.ansprechpartner.name || '');
+            setVal('apTel', payload.ansprechpartner.tel || '');
+            setVal('apFirma', payload.ansprechpartner.firma || '');
+            setVal('apNotes', payload.ansprechpartner.notes || '');
+          }
+          if(payload.followup){
+            setVal('followLast', payload.followup.last || '');
+            setVal('followNext', payload.followup.next || '');
+            setVal('followNote', payload.followup.note || '');
+          }
+          if(payload.bearbeiter){
+            const mail = payload.bearbeiter.mail || '';
+            if(mail && rbBearbeiterSelect){ rbBearbeiterSelect.value = mail.toLowerCase(); setRbBearbeiterFromSelect(true); }
+          }
+          if(Array.isArray(payload.timeline)){
+            state.timeline = payload.timeline;
+            renderTimeline();
+          }
+        }
+
+        // Fall B: Payload direkt aus Ereigniserfassung
+        if(isEreignisPayload(payload)){
+          applyEreignisPayloadToWorkflow(payload);
         }
 
         updateFollowupUi();
@@ -1171,7 +1456,6 @@
       }
 
       async function loadWorkflow(){
-        const id = ensureIncidentId();
         if(!LOAD_ENABLED){
           const txt = prompt('Noch keine LOAD_FLOW_URL gesetzt. Du kannst testweise PayloadJson aus SharePoint hier einfügen:');
           if(!txt) return;
@@ -1180,8 +1464,26 @@
           return;
         }
         try{
-          const res = await postJson(LOAD_FLOW_URL, { action:'get', ereignisId:id, limit:1 });
-          const payload = extractPayloadFromResponse(res, id);
+          const q = getQuery();
+          const urlId = (q.get('ereignisId') || q.get('incidentId') || q.get('id') || '').trim();
+          const currentId = (document.getElementById('incidentId')?.value || '').trim();
+          const wanted = urlId || (currentId && currentId !== 'INC-2026-000123' ? currentId : '');
+          const res = await postJson(LOAD_FLOW_URL, { action:'list', ereignisId:wanted, limit:100 });
+          const items = Array.isArray(res?.items) ? res.items : [];
+          let payload = null;
+
+          if(wanted){
+            payload = extractPayloadFromResponse(res, wanted);
+            if(!payload){
+              alert('Kein Vorfall mit dieser EreignisId gefunden: ' + wanted);
+              return;
+            }
+          } else {
+            const chosen = await openIncidentPicker(items);
+            if(!chosen) return;
+            payload = payloadFromItem(chosen);
+          }
+
           applyWorkflowPayload(payload);
         }catch(err){
           console.error(err);
@@ -1233,6 +1535,7 @@
       // URL-Prefill: ?ereignisId=... übernimmt die ID und lädt bei gesetzter LOAD_FLOW_URL automatisch.
       const q0 = getQuery();
       ensureIncidentId();
+      loadRbBearbeiter();
       loadMapSvg();
       renderPreview();
       if(LOAD_ENABLED && (q0.get('ereignisId') || q0.get('incidentId') || q0.get('id'))){
