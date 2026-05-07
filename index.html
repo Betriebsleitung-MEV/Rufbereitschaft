@@ -1,2309 +1,1172 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meldeformular</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ereignismanagement – Workflow (EL/RB)</title>
   <style>
-    /* ===== Basis (Test12-Style, desktop-first) ===== */
     body{font-family:Arial,sans-serif;background:#f5f5f5;padding:24px}
-    .form{max-width:1250px;margin:auto;background:#fff;padding:28px;border-radius:6px}
-    .section-title{background:#e53935;color:#fff;font-weight:800;text-align:center;font-size:20px;margin-top:18px}
-    .section-title div{padding:12px}
-    .subhead{margin:22px 0 10px;font-weight:800}
+    .app{max-width:1280px;margin:0 auto;background:#fff;padding:22px 24px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .topbar h1{font-size:18px;margin:0}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap}
 
-    /* Layout helpers */
-    .row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
-    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:12px 0}
-    .row-map{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin:12px 0}
-    @media (max-width: 1100px){
-      .row-map{grid-template-columns:1fr;}
-      .row-2,.row-3{grid-template-columns:1fr;}
-    }
-
-    /* Buttons / Fields */
     button{cursor:pointer}
-    .btn-secondary{width:auto;padding:10px 12px;background:#eee;border:1px solid #ccc;border-radius:6px;font-weight:800}
-    .btn-primary{width:auto;padding:10px 14px;background:#2e7d32;color:#fff;border:1px solid #2e7d32;border-radius:6px;font-weight:900}
+    .btn-primary{padding:10px 14px;background:#2e7d32;border:1px solid #2e7d32;color:#fff;border-radius:8px;font-weight:900}
+    .btn-secondary{padding:10px 14px;background:#eee;border:1px solid #ccc;border-radius:8px;font-weight:900}
+    .btn-danger{padding:10px 14px;background:#e53935;border:1px solid #e53935;color:#fff;border-radius:8px;font-weight:900}
 
-    input, textarea, select{width:100%;padding:10px;border:1px solid #bbb;border-radius:6px;box-sizing:border-box;font-size:14px}
+    .grid{display:grid;gap:14px}
+    .row-2{grid-template-columns:1.2fr .8fr}
+    .row-3{grid-template-columns:1fr 1fr 1fr}
+    @media (max-width: 1100px){.row-2,.row-3{grid-template-columns:1fr}}
+
+    .section-title{background:#e53935;color:#fff;font-weight:900;text-align:center;border-radius:8px;margin-top:16px}
+    .section-title div{padding:12px;font-size:18px}
+    .subhead{margin:14px 0 8px;font-weight:900}
+
+    .card{border-radius:10px;padding:12px;border:2px solid #cfcfcf;background:#f0f0f0}
+    .card.active{border-color:#6bc28a;background:#dff5e1}
+    .field{background:#f9f9f9;padding:12px;border-radius:10px}
+    input, textarea, select{width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;box-sizing:border-box;font-size:14px}
     textarea{resize:vertical}
-    .field{background:#f9f9f9;padding:12px;border-radius:8px;max-width:none}
-    .field.narrow{max-width:780px;margin-right:auto;}
     .hint{font-size:12px;color:#666;margin-top:6px}
 
-    /* Pillars */
-    .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:12px 0}
-    .pillar{padding:16px;border-radius:10px;text-align:center;font-weight:800;background:#e0e0e0;cursor:pointer;user-select:none}
+    .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff;border:1px solid rgba(0,0,0,.15);font-weight:900;font-size:12px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px}
+
+    /* Actor switch */
+    .actor{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .actor .pill{padding:10px 12px;border-radius:999px;border:2px solid #cfcfcf;background:#f0f0f0;font-weight:900;cursor:pointer;user-select:none}
+    .actor .pill.active{border-color:#6bc28a;background:#dff5e1}
+
+    /* Status Pillars */
+    .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .pillar{padding:14px;border-radius:12px;text-align:center;font-weight:900;background:#e0e0e0;cursor:pointer;user-select:none;position:relative}
     .pillar.active{background:#dff5e1;border:2px solid #6bc28a}
-    .pillar.locked{cursor:default;opacity:.95}
-    .pillar.small{padding:12px;font-weight:900}
-    .p-label{font-size:12px;font-weight:800;opacity:.75;margin-bottom:6px}
+    .p-label{font-size:12px;font-weight:900;opacity:.7;margin-bottom:6px}
     .p-value{font-size:14px;font-weight:900}
+    .pillar .mini{position:absolute;right:10px;top:10px}
 
-    /* Cards (grau/grün) */
-    .card{border-radius:10px;padding:12px}
-    .card.is-inactive{background:#f0f0f0;border:2px solid #cfcfcf}
-    .card.is-active{background:#dff5e1;border:2px solid #6bc28a}
+    /* Chips */
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{border-radius:999px;padding:8px 10px;background:#eef2ff;border:1px solid #cfd8ff;font-weight:900;font-size:12px;cursor:pointer;user-select:none}
+    .chip.done{background:#dff5e1;border-color:#6bc28a}
+    .chip.blocked{background:#fff1f1;border-color:#e53935}
 
-    /* System box */
-    .sysbox{padding:12px;border-radius:10px;background:#eef2ff;border:2px dashed #4d73ff;font-weight:900;text-align:center}
+    .chip2{border-radius:999px;padding:8px 10px;background:#eee;border:1px solid #ccc;font-weight:900;font-size:12px;cursor:pointer;user-select:none}
+    .chip2.done{background:#dff5e1;border-color:#6bc28a}
 
-    /* hide */
-    .is-hidden{display:none}
+    /* Timeline */
+    .timeline{border-left:3px solid #ddd;margin:8px 0 0 6px;padding-left:14px;display:flex;flex-direction:column;gap:10px}
+    .t-item{position:relative}
+    .t-item::before{content:'';position:absolute;left:-23px;top:3px;width:12px;height:12px;border-radius:999px;background:#bbb}
+    .t-item.done::before{background:#2e7d32}
+    .t-item.warn::before{background:#e53935}
+    .t-item.info::before{background:#1e88e5}
+    .t-time{font-size:12px;color:#666;font-weight:900}
+    .t-text{font-size:13px;font-weight:900}
+    .t-sub{font-size:12px;color:#666}
 
-    /* Involvierte */
-    .inv-role-block.is-hidden{display:none}
-    .inv-list{display:flex;flex-direction:column;gap:12px;margin-top:10px}
-    .inv-person{border:1px dashed #aaa;border-radius:10px;padding:12px;background:#fafafa}
-    .inv-person-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
-    .inv-badge{font-weight:900;padding:6px 10px;border-radius:999px;background:#e0e0e0}
-    .inv-actions{display:flex;gap:8px}
+    /* Follow-up traffic light */
+    .traffic{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .lamp{width:12px;height:12px;border-radius:999px;background:#bbb;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+    .lamp.green{background:#2e7d32}
+    .lamp.yellow{background:#f9a825}
+    .lamp.red{background:#e53935}
 
-    /* SUFU Overlay */
-    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:9999}
-    .overlay-box{background:#fff;padding:16px;border-radius:10px;min-width:520px;max-width:860px;width:72vw}
-    .sufu-input{width:100%;padding:10px;margin-bottom:8px;border:1px solid #bbb;border-radius:6px}
-    .sufu-list{max-height:420px;overflow:auto;border:1px solid #ddd;border-radius:6px}
-    .sufu-item{padding:10px;cursor:pointer;border-bottom:1px solid #eee}
-    .sufu-item:hover{background:#eef2ff}
-    .sufu-small{font-size:12px;color:#666}
+    .map{background:#f3f3f3;border:2px dashed #bbb;border-radius:12px;min-height:260px;position:relative;overflow:hidden;aspect-ratio:1/1}
+    .map .txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;color:#777;text-align:center;padding:12px}
+    .map svg{width:100%;height:100%;display:block}
 
-    /* Map */
-    .map-wrap{background:#f3f3f3;border:2px dashed #bbb;border-radius:10px;min-height:340px;position:relative;overflow:hidden;aspect-ratio: 1 / 1;}
-    .map-wrap.loading::before{content:"Karte wird geladen …";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;color:#666}
-    .map-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
-    .map-toolbar .hint{margin:0}
-    .svg-station-selected{stroke:#2e7d32 !important;stroke-width:2.5 !important;fill:#dff5e1 !important}
-    .map-ring{
-  position:absolute;
-  width:22px;height:22px;
-  border-radius:999px;
-  border:3px solid #2e7d32;
-  background:transparent;
-  pointer-events:none;
-  display:none;
-  z-index:10;
-  box-sizing:border-box;
-}
-.map-ring.start{ border-color:#e53935; } /* Start = rot */
-.map-ring.ziel{ border-color:#1e88e5; }  /* Ziel  = blau */
-
-/* Typeahead (Karte) */
-.typeahead{position:relative;}
-.typeahead input{font-size:16px;}
-.ta-list{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #bbb;border-radius:6px;max-height:340px;overflow:auto;z-index:10000;display:none;box-shadow:0 6px 18px rgba(0,0,0,.12);}
-.ta-item{padding:12px 14px;cursor:pointer;border-bottom:1px solid #eee;font-size:15px;line-height:1.25;}
-.ta-item:last-child{border-bottom:none;}
-.ta-item:hover,.ta-item.active{background:#eef2ff;}
-.ta-small{font-size:12px;color:#666;margin-top:2px;}
-/* Start = rot */
-    .map-ring.ziel{border-color:#1e88e5;}   /* Ziel  = blau */
-   }
-    
+    .foot{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:14px}
 
 
-    /* Fotos */
-    
-   /* Fotos: immer 2 Spalten, 2 Zeilen (JS limitiert auf 4) */
-   .photos{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-   .photos.narrow{max-width:780px;margin-right:auto;}
-   
-   /* Kacheln doppelt so gross */
-   .photo-thumb{height:260px;border:2px solid #000;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff}
+    /* ===== iPhone/iPad Optimierung ===== */
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+    body{min-height:100vh}
+    button,input,textarea,select{font-size:16px} /* verhindert iOS Auto-Zoom */
+    button{min-height:44px;touch-action:manipulation}
+    .top-actions button{white-space:nowrap}
+    .card,.field,.pillar,.chip,.chip2{touch-action:manipulation}
+    .payload-debug details{margin-top:10px}
 
-    .photo-thumb img{max-width:100%;max-height:100%;display:block}
-    .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#eee;border:1px solid #ccc;font-weight:900;font-size:12px;margin-left:8px}
-    #autoBadge{display:none;}
+    @media (max-width: 900px){
+      body{padding:10px;background:#fff}
+      .app{padding:12px;border-radius:0;box-shadow:none;max-width:none}
+      .topbar{position:sticky;top:0;z-index:20;background:#fff;padding:8px 0 10px;border-bottom:1px solid #e6e6e6;align-items:flex-start}
+      .topbar h1{font-size:17px;line-height:1.25}
+      .top-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .top-actions button{width:100%;padding:11px 10px}
+      .top-actions #btnClose{grid-column:1 / -1}
+      .section-title{border-radius:8px;margin-top:14px}
+      .section-title div{font-size:16px;padding:10px}
+      .grid{gap:10px}
+      .card,.field{padding:10px;border-radius:10px}
+      .pillars{grid-template-columns:1fr !important;gap:8px}
+      .pillar{text-align:left;padding:12px 44px 12px 12px;min-height:48px}
+      .pillar .mini{right:12px;top:50%;transform:translateY(-50%)}
+      .chips{display:grid;grid-template-columns:1fr;gap:8px}
+      .chip,.chip2{display:block;padding:12px;text-align:left}
+      .actor{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .actor .pill{text-align:center;padding:11px 8px}
+      textarea{min-height:90px}
+      .timeline{max-height:50vh;overflow:auto;padding-right:6px}
+      .map{min-height:220px;aspect-ratio:4/3}
+      .foot{display:block}
+      .foot .mono{margin-top:8px;display:block;word-break:break-word}
+    }
 
+    @media (max-width: 430px){
+      body{padding:6px}
+      .app{padding:8px}
+      .top-actions{grid-template-columns:1fr}
+      .top-actions #btnClose{grid-column:auto}
+      .topbar h1{font-size:16px}
+      .subhead{font-size:14px}
+      .hint{font-size:11px}
+      .map{min-height:190px}
+    }
 
+    @media (min-width: 901px) and (max-width: 1180px){
+      body{padding:16px}
+      .app{max-width:100%;padding:18px}
+      .row-2{grid-template-columns:1fr}
+      .top-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+      .top-actions button{width:100%}
+    }
 
-    /* SharePoint / Bewertungsanzeige */
-    .flag-unused{display:none !important}
-    #flags_pillars.is-empty{display:none !important}
-    #bewertung_head.is-hidden,#vorgehen_section.is-hidden,#rb_head.is-hidden{display:none !important}
-    .save-status{font-size:12px;font-weight:900;padding:6px 10px;border-radius:999px;background:#eee;border:1px solid #ccc;align-self:center}
-    .save-status.ok{background:#dff5e1;border-color:#6bc28a;color:#134d24}
-    .save-status.err{background:#ffe8e8;border-color:#e53935;color:#b00020}
-    .save-status.run{background:#eef2ff;border-color:#4d73ff;color:#1e3d8f}
-    .save-status.warn{background:#fff8e1;border-color:#f5c000;color:#5f4200}
-
-    /* Top bar */
-    .topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
-    .topbar h1{font-size:18px;margin:0}
   </style>
 </head>
 <body>
-<div class="form">
-  <div class="topbar">
-    <h1>Ereignismeldung</h1>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button type="button" class="btn-primary" id="btnSubmit">In SharePoint speichern</button>
-      <button type="button" class="btn-secondary" id="btnExportJson">JSON exportieren</button>
-      <button type="button" class="btn-secondary" id="btnReset">Formular zurücksetzen</button>
-      <span class="save-status" id="saveStatus">nicht gespeichert</span>
-    </div>
-  </div>
-
-  <!-- ===================== -->
-  <!-- 1) ALARMIERUNG        -->
-  <!-- ===================== -->
-  <div class="section-title"><div>Alarmierung</div></div>
-
-  <div class="subhead">Meldung Datum / Meldung Uhrzeit</div>
-  <div class="row-2">
-    <div class="field">
-      <div style="font-weight:900;margin-bottom:6px;">Meldung Datum *</div>
-      <input id="meldung_datum" type="date" required>
-      <div class="hint">Automatisch „heute“, manuell änderbar</div>
-    </div>
-    <div class="field">
-      <div style="font-weight:900;margin-bottom:6px;">Meldung Uhrzeit *</div>
-      <input id="meldung_uhrzeit" type="time" required>
-      <div class="hint">Automatisch „jetzt“, manuell änderbar</div>
-    </div>
-  </div>
-
-  <div class="subhead">Melder</div>
-  <div class="row-2">
-    <div id="melderInternCard" class="card is-inactive">
-      <div style="font-weight:900;margin-bottom:8px;">Melder intern</div>
-      <button type="button" class="btn-secondary" id="btnPickMelderIntern">Mitarbeiter suchen (SUFU)</button>
-<select id="melderInternSelect" class="is-hidden"><option value="">Bitte wählen</option></select>
-      <div class="pillars" style="margin-top:12px;">
-        <div class="pillar locked" style="cursor:default;"><div class="p-label">Typ</div><div class="p-value" id="melder_typ">—</div></div>
-        <div class="pillar locked is-hidden" id="melder_vor_P" style="cursor:default;"><div class="p-label">Vorname</div><div class="p-value" id="melder_vor">—</div></div>
-        <div class="pillar locked is-hidden" id="melder_nach_P" style="cursor:default;"><div class="p-label">Nachname</div><div class="p-value" id="melder_nach">—</div></div>
-        <div class="pillar locked is-hidden" id="melder_mail_P" style="cursor:default;"><div class="p-label">Mail</div><div class="p-value" id="melder_mail">—</div></div>
-        <div class="pillar locked is-hidden" id="melder_tel_P" style="cursor:default;"><div class="p-label">Telefon</div><div class="p-value" id="melder_tel">—</div></div>
-      </div>
-      <div class="hint">Quelle: assets/mitarbeiter.json</div>
-    </div>
-
-    <div id="melderExternCard" class="card is-inactive">
-      <div style="font-weight:900;margin-bottom:8px;">Melder extern</div>
-      <input id="melderExternFirma" type="text" placeholder="Unternehmen (optional)">
-      <div class="row-2" style="margin-top:10px;">
-        <input id="melderExternVor" type="text" placeholder="Vorname (optional)">
-        <input id="melderExternNach" type="text" placeholder="Nachname (optional)">
-      </div>
-      <div class="row-2" style="margin-top:10px;">
-        <input id="melderExternMail" type="email" placeholder="Mail (optional)">
-        <input id="melderExternTel" type="tel" placeholder="Telefon (optional)">
-      </div>
-      <div class="hint">Manuelle Eingabe (nur erfassen, was vorhanden ist)</div>
-    </div>
-  </div>
-
-  <div class="subhead">Erfasser</div>
-  <div class="row-2">
-    <div class="field">
-      <div style="font-weight:900;margin-bottom:6px;">Erfasser Datum</div>
-      <div class="sysbox" id="erfasser_sys_datum">—</div>
-      <div class="hint">Systemdatum (unveränderbar)</div>
-    </div>
-    <div class="field">
-      <div style="font-weight:900;margin-bottom:6px;">Erfasser Uhrzeit</div>
-      <div class="sysbox" id="erfasser_sys_uhrzeit">—</div>
-      <div class="hint">Systemuhrzeit (unveränderbar)</div>
-    </div>
-  </div>
-
-  <div id="erfasserCard" class="card is-inactive">
-    <div style="font-weight:900;margin-bottom:8px;">Erfasser auswählen</div>
-    <button type="button" class="btn-secondary" id="btnPickErfasser">Mitarbeiter suchen (SUFU)</button>
-<select id="erfasserSelect" class="is-hidden"><option value="">Bitte wählen</option></select>
-    <div class="pillars" style="margin-top:12px;">
-      <div class="pillar locked" style="cursor:default;"><div class="p-label">Typ</div><div class="p-value" id="erfasser_typ">—</div></div>
-      <div class="pillar locked is-hidden" id="erfasser_vor_P" style="cursor:default;"><div class="p-label">Vorname</div><div class="p-value" id="erfasser_vor">—</div></div>
-      <div class="pillar locked is-hidden" id="erfasser_nach_P" style="cursor:default;"><div class="p-label">Nachname</div><div class="p-value" id="erfasser_nach">—</div></div>
-      <div class="pillar locked is-hidden" id="erfasser_mail_P" style="cursor:default;"><div class="p-label">Mail</div><div class="p-value" id="erfasser_mail">—</div></div>
-      <div class="pillar locked is-hidden" id="erfasser_tel_P" style="cursor:default;"><div class="p-label">Telefon</div><div class="p-value" id="erfasser_tel">—</div></div>
-    </div>
-    <div class="hint">Quelle: assets/mitarbeiter.json</div>
-  </div>
-
-  <div class="subhead">Involvierte Mitarbeitende</div>
-  <div class="pillars" id="invRoles" style="grid-template-columns:repeat(4,1fr)">
-    <div class="pillar" data-role="lokfuehrer">Lokführer</div>
-    <div class="pillar" data-role="rangierer">Rangierer</div>
-    <div class="pillar" data-role="wagenmeister">Wagenmeister</div>
-    <div class="pillar" data-role="andere">Andere</div>
-  </div>
-  <div class="hint" id="invHint">Maximal 3 involvierte Personen erfassen (über alle Rollen hinweg).</div>
-
-  <div id="invRoleContainers">
-    <div class="inv-role-block is-hidden" data-role-block="lokfuehrer">
-      <div class="subhead">Lokführer</div>
-      <button type="button" class="btn-secondary inv-add" data-role="lokfuehrer">Person hinzufügen</button>
-      <div class="inv-list" id="invList_lokfuehrer"></div>
-    </div>
-    <div class="inv-role-block is-hidden" data-role-block="rangierer">
-      <div class="subhead">Rangierer</div>
-      <button type="button" class="btn-secondary inv-add" data-role="rangierer">Person hinzufügen</button>
-      <div class="inv-list" id="invList_rangierer"></div>
-    </div>
-    <div class="inv-role-block is-hidden" data-role-block="wagenmeister">
-      <div class="subhead">Wagenmeister</div>
-      <button type="button" class="btn-secondary inv-add" data-role="wagenmeister">Person hinzufügen</button>
-      <div class="inv-list" id="invList_wagenmeister"></div>
-    </div>
-    <div class="inv-role-block is-hidden" data-role-block="andere">
-      <div class="subhead">Andere</div>
-      <button type="button" class="btn-secondary inv-add" data-role="andere">Person hinzufügen</button>
-      <div class="inv-list" id="invList_andere"></div>
-    </div>
-  </div>
-
-  <div class="subhead">Bemerkungen zur Alarmierung</div>
-  <div class="field narrow">
-    <textarea id="alarm_bemerkungen" rows="4" placeholder="Bemerkungen (optional)"></textarea>
-    <div class="hint">Freitext</div>
-  </div>
-
-  <!-- ===================== -->
-  <!-- 2) EREIGNISDATEN      -->
-  <!-- ===================== -->
-  <div class="section-title"><div>Ereignisdaten</div></div>
-
-  <div class="subhead">Ereignisart</div>
-  <div id="evPillars" class="pillars">
-    <div class="pillar locked" style="cursor:default;background:#f0f0f0;border:1px dashed #bbb;">Lädt Ereignisarten aus assets/entscheidungsbaum.json …</div>
-  </div>
-
-  <div id="varSection" class="is-hidden">
-    <div class="subhead">Variante</div>
-    <div id="varPillars" class="pillars"></div>
-  </div>
-
-  <!-- Hidden keys for decisions -->
-  <input type="hidden" id="ev_key" value="">
-  <input type="hidden" id="var_key" value="">
-
-  <div class="subhead" style="margin-top:28px;">Zug / Fahrzeug</div>
-  <div id="zugfahrzeugPillars" class="pillars" style="grid-template-columns:repeat(3,1fr);">
-    <div class="pillar" data-mode="zug">Zugnummer</div>
-    <div class="pillar" data-mode="lok">Loknummer</div>
-    <div class="pillar" data-mode="wagen">Wagennummer</div>
-  </div>
-  <div class="field">
-    <input id="zugfahrzeugInput" type="text" placeholder="Nummer eingeben">
-    <div class="hint" id="zugfahrzeugHint">Wähle oben Zugnummer, Loknummer oder Wagennummer. Die Auswahl wird grün markiert.</div>
-  </div>
-
-  <div class="subhead" style="margin-top:22px;">Ereignisort</div>
-  <div id="ortPillars" class="pillars" style="grid-template-columns:repeat(3,1fr);">
-    <div class="pillar" data-ort="strecke">Strecke</div>
-    <div class="pillar" data-ort="bahnhof">Bahnhof</div>
-    <div class="pillar" data-ort="anschluss">Anschlussgleis</div>
-  </div>
-
-  <div class="row-map">
-    <div>
-      <div id="ortBahnhof" class="field is-hidden">
-  <div style="font-weight:900;margin-bottom:6px;">Bahnhof</div>
-  <div class="typeahead">
-    <input id="taBahnhof" type="text" autocomplete="off" placeholder="Station oder Kürzel (mind. 2 Zeichen)">
-    <div class="ta-list" id="taBahnhofList"></div>
-  </div>
-  <div class="hint" id="viewBahnhof">—</div>
-
-  <div style="font-weight:900;margin:12px 0 6px;">Zugziel</div>
-  <div class="typeahead">
-    <input id="taZugziel" type="text" autocomplete="off" placeholder="Zugziel oder Kürzel (mind. 2 Zeichen)">
-    <div class="ta-list" id="taZugzielList"></div>
-  </div>
-  <div class="hint" id="viewZugziel">—</div>
-</div>
-
-<div id="ortStrecke" class="field is-hidden">
-  <div style="font-weight:900;margin-bottom:6px;">Strecke Start</div>
-  <div class="typeahead">
-    <input id="taStart" type="text" autocomplete="off" placeholder="Startstation oder Kürzel (mind. 2 Zeichen)">
-    <div class="ta-list" id="taStartList"></div>
-  </div>
-  <div class="hint" id="viewStart">—</div>
-
-  <div style="font-weight:900;margin:12px 0 6px;">Strecke Ziel</div>
-  <div class="typeahead">
-    <input id="taZiel" type="text" autocomplete="off" placeholder="Zielstation oder Kürzel (mind. 2 Zeichen)">
-    <div class="ta-list" id="taZielList"></div>
-  </div>
-  <div class="hint" id="viewZiel">—</div>
-</div>
-
-<div id="ortAnschluss" class="field is-hidden">
-  <div style="font-weight:900;margin-bottom:6px;">Anschluss Station</div>
-  <div class="typeahead">
-    <input id="taAnschluss" type="text" autocomplete="off" placeholder="Station oder Kürzel (mind. 2 Zeichen)">
-    <div class="ta-list" id="taAnschlussList"></div>
-  </div>
-  <div class="hint" id="viewAnschluss">—</div>
-  <div style="margin-top:10px;">
-    <input type="text" id="anschlussText" placeholder="Anschluss / Gleis">
-  </div>
-</div>
-
-      <div class="field narrow" style="margin-top:12px;">
-        <div style="font-weight:800;margin-bottom:8px;">Bemerkungen</div>
-        <textarea id="ereignis_bemerkungen" rows="3" placeholder="Bemerkungen (optional)"></textarea>
+  <div class="app">
+    <div class="topbar">
+      <h1>Ereignismanagement – Workflow (EL/RB)</h1>
+      <div class="top-actions">
+        <button class="btn-secondary" type="button" id="btnLoad">Vorfall laden</button>
+        <button class="btn-primary" type="button" id="btnSave">Speichern / Aktualisieren</button>
+        <button class="btn-danger" type="button" id="btnClose">Vorfall abschliessen</button>
       </div>
     </div>
 
-    <div>
-      <div class="subhead" style="margin-top:0;">Karte (Anzeige)</div>
-      <div class="map-toolbar">
-        <button type="button" class="btn-secondary" id="btnMapReset">Zoom zurücksetzen</button>
-        <span class="hint" id="mapStatus">map.svg: nicht geladen</span>
-      </div>
-      <div id="mapBox" class="map-wrap loading"></div>
-      <div class="hint">Die Karte ist Anzeige-only. Zoom/Markierung erfolgt automatisch aus der Ortsauswahl.</div>
-    </div>
-  </div>
+    <div class="section-title"><div>Vorfall – Ereignisbearbeitung</div></div>
 
-  <!-- ===================== -->
-  <!-- 3) ENTSCHEIDUNGEN     -->
-  <!-- ===================== -->
-  <div class="section-title"><div>Entscheidungen</div></div>
-
-  <div class="subhead">EVU / Führend</div>
-  <div class="row-2">
-    <div class="field">
-      <div style="font-weight:900;margin-bottom:6px;">EVU
-      </div>
-      <select id="evu_select"><option value="">Lädt EVU …</option></select>
-      <div class="hint">EVU kommt aus assets/entscheidungsbaum.json</div>
-    </div>
-    <div class="field">
-      <div style="font-weight:900;margin-bottom:6px;">Verantwortlich</div>
-      <div id="fuehrend_view" class="sysbox">—</div>
-      <div class="hint" id="fuehrend_hint">Wird nach Auswahl von Ereignisart/Variante automatisch gesetzt.</div>
-    </div>
-  </div>
-
-  <div class="subhead is-hidden" id="bewertung_head">Bewertung <span class="badge" id="autoBadge">Auto</span></div>
-  <div class="row-2 is-hidden">
-    <div class="field">
-      <label style="font-weight:900;display:flex;gap:10px;align-items:center;">
-        <input type="checkbox" id="override_toggle"> Manuell überschreiben
-      </label>
-      <div class="hint">Wenn ausgeschaltet, werden EL/RB/FS/EK automatisch aus dem Entscheidungsbaum gesetzt.</div>
-    </div>
-    <div class="field">
-      <div style="font-weight:900;margin-bottom:6px;">Quelle</div>
-      <div id="source_view" class="hint">—</div>
-    </div>
-  </div>
-
-  <div id="flags_pillars" class="pillars" style="grid-template-columns:repeat(4,1fr);">
-    <div class="pillar locked" data-flag="EL">Einsatzleitung (EL)</div>
-    <div class="pillar locked" data-flag="RB">Rufbereitschaft (RB)</div>
-    <div class="pillar locked" data-flag="FS">Fahrtstopp (FS) 🛑</div>
-    <div class="pillar locked" data-flag="EK">Erweiterter Kreis (EK)</div>
-  </div>
-
-  <div class="subhead is-hidden" id="rb_head">Rufbereitschaft</div>
-  <div class="card is-inactive is-hidden" id="rb_card">
-    <div style="font-weight:900;margin-bottom:8px;">Aktuell (Notfallmanagement)</div>
-    <div class="pillars" style="grid-template-columns:repeat(4,1fr);margin-top:0;">
-      <div class="pillar small locked" style="cursor:default;"><div class="p-label">Name</div><div class="p-value" id="rb_name">—</div></div>
-      <div class="pillar small locked" style="cursor:default;"><div class="p-label">Mail</div><div class="p-value" id="rb_mail">—</div></div>
-      <div class="pillar small locked" style="cursor:default;"><div class="p-label">Telefon</div><div class="p-value" id="rb_tel">—</div></div>
-      <div class="pillar small locked" style="cursor:default;"><div class="p-label">Zeitraum</div><div class="p-value" id="rb_zeit">—</div></div>
-    </div>
-    <div class="hint" id="rb_hint">Wird aus assets/rufbereitschaft_plan.json ermittelt.</div>
-  </div>
-
-<div id="vorgehen_section" class="is-hidden">
-<div class="subhead">Weiteres Vorgehen (Einsatzleitung)</div>
-
-  <div class="field">
-    <div style="font-weight:900;margin-bottom:6px;">Weitere interne Schritte</div>
-    <div id="vorgehenPillars" class="pillars" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));"></div>
-    <div class="hint" id="vorgehenHint">
-      Wird aus entscheidungsbaum.json berechnet (massnahmen_global + massnahmen_evu).
-    </div>
-  </div>
-
-  <div class="field narrow">
-    <div style="font-weight:900;margin-bottom:6px;">Vorgehen / Auftrag</div>
-    <textarea id="massnahmen_text" rows="4" placeholder="Bemerkungen zum Vorgehen (optional)"></textarea>
-    <div class="hint">Freitext</div>
-  </div>
-
-  <div class="field narrow" style="margin-top:12px;">
-    <div style="font-weight:900;margin-bottom:6px;">Bemerkungen zur Entscheidung</div>
-    <textarea id="entscheid_bemerkungen" rows="3" placeholder="Bemerkungen (optional)"></textarea>
-  </div>
-</div>
-
-  <!-- ===================== -->
-  <!-- 4) FOTOS (optional)   -->
-  <!-- ===================== -->
-  <div class="section-title"><div>Fotos (optional)</div></div>
-  <div class="field narrow">
-    <div style="font-weight:900;margin-bottom:6px;">Fotos auswählen</div>
-    <input id="photoInput" type="file" accept="image/*" multiple>
-    <div class="hint">Empfohlen: max. 4 Fotos / total max. 10 MB</div>
-  </div>
-  <div class="photos narrow" id="photoPreview" style="margin-top:12px;"></div>
-
-</div>
-
-<script>
-/* =========================================================
-   Meldeformular – Gesamtlogik (GitHub assets/*)
-   - Alarmierung (Mitarbeiter/Intern-Extern/Involvierte)
-   - Ereignisdaten (Entscheidungsbaum + SUFU Stationen + Karte)
-   - Entscheidungen (Auto Flags + Führend + Rufbereitschaft)
-   - SharePoint Upsert + JSON-Fallback
-========================================================= */
-
-(async function(){
-  const URL_STAFF = 'assets/mitarbeiter.json';
-  const URL_TREE  = 'assets/entscheidungsbaum.json';
-  const URL_RB    = 'assets/rufbereitschaft_plan.json';
-  const URL_STATIONS = 'assets/stationen_aus_svg.json';
-  const URL_MAP = 'assets/map.svg';
-
-  // Power-Automate-HTTP-Trigger: URL nach dem Speichern des Flows hier einfügen.
-  // Beispiel: const SAVE_FLOW_URL = 'https://.../triggers/manual/paths/invoke?...';
-  const SAVE_FLOW_URL = 'https://defaulte3d2e8defe3548eaa78972c4a2acf9.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7659dd88f4f440319ce452a19d40a2bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JbYc2mpIVfIuF5mQmKcZalNY8N2tDSyf2xqbgcvKeCM';
-  const FLOW_ENABLED = SAVE_FLOW_URL && !SAVE_FLOW_URL.includes('HIER_DEINE_FLOW_HTTP_URL');
-
-  const pad = (n)=> String(n).padStart(2,'0');
-  const now = new Date();
-  const todayISO = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const timeHHMM = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  const fmtDate = (d)=> d.toLocaleDateString('de-CH');
-
-  const saveStatus = document.getElementById('saveStatus');
-  const urlParams = new URLSearchParams(window.location.search);
-
-  function setSaveStatus(text, kind=''){
-    if(!saveStatus) return;
-    saveStatus.textContent = text;
-    saveStatus.className = `save-status ${kind}`.trim();
-  }
-
-  function getOrCreateEreignisId(){
-    const fromUrl = urlParams.get('ereignisId');
-    if(fromUrl) return fromUrl;
-    const existing = sessionStorage.getItem('mev_ereignis_id');
-    if(existing) return existing;
-    const d = new Date();
-    const id = `EVT-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    sessionStorage.setItem('mev_ereignis_id', id);
-    return id;
-  }
-
-  function setFieldValue(id, value){
-    const el = document.getElementById(id);
-    if(!el || value == null || value === '') return;
-    el.value = value;
-    el.dispatchEvent(new Event('input', {bubbles:true}));
-    el.dispatchEvent(new Event('change', {bubbles:true}));
-  }
-
-  function clickPillar(selector){
-    const el = document.querySelector(selector);
-    if(el) el.click();
-  }
-
-  function setCardActive(card, active){
-    card.classList.toggle('is-active', !!active);
-    card.classList.toggle('is-inactive', !active);
-  }
-  function showIf(el, val){
-    const has = !!(val && String(val).trim());
-    el.classList.toggle('is-hidden', !has);
-  }
-  function escapeHtml(s){
-  return String(s)
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'",'&#39;');
-}
-
-  // Prefill Meldung Datum/Uhrzeit
-  const meldD = document.getElementById('meldung_datum');
-  const meldT = document.getElementById('meldung_uhrzeit');
-  if(!meldD.value) meldD.value = todayISO;
-  if(!meldT.value) meldT.value = timeHHMM;
-
-  // Erfasser Systemzeit
-  document.getElementById('erfasser_sys_datum').textContent = fmtDate(now);
-  document.getElementById('erfasser_sys_uhrzeit').textContent = timeHHMM;
-  setSaveStatus(FLOW_ENABLED ? 'bereit für SharePoint' : 'Flow-URL fehlt', FLOW_ENABLED ? 'warn' : 'err');
-
-  // Load Mitarbeitende
-  let staffFlat = [];
-  let staffByMail = new Map();
-  try{
-    const res = await fetch(URL_STAFF);
-    const json = await res.json();
-    const byDept = json.employeesByDepartment || {};
-    for(const [dept, list] of Object.entries(byDept)){
-      if(!Array.isArray(list)) continue;
-      for(const p of list){
-        if(!p || p.aktiv === false) continue;
-        const row = {
-          dept,
-          mev_id: p.mev_id || '',
-          vorname: p.vorname || '',
-          nachname: p.nachname || '',
-          mail: p.mail || '',
-          tel: p.tel || ''
-        };
-        staffFlat.push(row);
-        if(row.mail) staffByMail.set(row.mail.toLowerCase(), row);
-      }
-    }
-    staffFlat.sort((a,b)=> (a.nachname+' '+a.vorname).localeCompare(b.nachname+' '+b.vorname, 'de-CH'));
-  }catch(err){
-    console.warn('Mitarbeiterliste konnte nicht geladen werden:', err);
-  }
-
-  const optionsHTML = ['<option value="">Bitte wählen</option>']
-    .concat(staffFlat.map(p=>{
-      const label = `${p.nachname} ${p.vorname} (${p.dept})`;
-      const val = p.mev_id || label;
-      return `<option value="${escapeHtml(val)}" data-vorname="${escapeHtml(p.vorname)}" data-nachname="${escapeHtml(p.nachname)}" data-mail="${escapeHtml(p.mail)}" data-tel="${escapeHtml(p.tel)}">${escapeHtml(label)}</option>`;
-    })).join('');
-    // ===== Mitarbeitende SUFU =====
-  function openStaffPicker(title, cb){
-    const ov = document.createElement('div');
-    ov.className = 'overlay';
-    ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.remove(); });
-
-    const box = document.createElement('div');
-    box.className = 'overlay-box';
-    ov.appendChild(box);
-
-    box.innerHTML = `
-      <div style="font-weight:900;margin-bottom:10px;">${escapeHtml(title)}</div>
-      <input class="sufu-input" placeholder="Suche nach Name, Mail, Tel, ID, Abteilung …">
-      <div class="sufu-list"></div>
-      <div style="display:flex;gap:10px;margin-top:10px;justify-content:flex-end;">
-        <button type="button" class="btn-secondary">Schliessen</button>
-      </div>
-    `;
-
-    const input = box.querySelector('.sufu-input');
-    const list = box.querySelector('.sufu-list');
-    box.querySelector('.btn-secondary').onclick = ()=> ov.remove();
-
-    function render(q){
-      q = (q||'').trim().toLowerCase();
-      list.innerHTML = '';
-
-      let filtered = staffFlat;
-      if(q){
-        filtered = staffFlat.filter(p=>{
-          const hay = `${p.nachname} ${p.vorname} ${p.mail} ${p.tel} ${p.mev_id} ${p.dept}`.toLowerCase();
-          return hay.includes(q);
-        });
-      }
-
-      filtered.slice(0, 400).forEach(p=>{
-        const item = document.createElement('div');
-        item.className = 'sufu-item';
-        item.innerHTML = `
-          <div style="font-weight:900;">${escapeHtml(p.nachname)} ${escapeHtml(p.vorname)} <span class="sufu-small">(${escapeHtml(p.dept)})</span></div>
-          <div class="sufu-small">${escapeHtml(p.mail||'')} ${p.tel ? ('· '+escapeHtml(p.tel)) : ''} ${p.mev_id ? ('· '+escapeHtml(p.mev_id)) : ''}</div>
-        `;
-        item.onclick = ()=>{ ov.remove(); cb(p); };
-        list.appendChild(item);
-      });
-
-      if(!list.children.length){
-        const item = document.createElement('div');
-        item.className = 'sufu-item';
-        item.innerHTML = '<div style="font-weight:900;">Kein Treffer</div>';
-        list.appendChild(item);
-      }
-    }
-
-    input.addEventListener('input', ()=> render(input.value));
-    render('');
-    document.body.appendChild(ov);
-    input.focus();
-  }
-
-  function setSelectToStaff(selectEl, p){
-    if(!selectEl || !p) return;
-    const val = p.mev_id || `${p.nachname} ${p.vorname} (${p.dept})`;
-    selectEl.value = val;
-    selectEl.dispatchEvent(new Event('change', {bubbles:true}));
-  }
-
-
-  function findStaffFromPrefill(name, mail){
-    const mailLc = (mail || '').trim().toLowerCase();
-    if(mailLc && staffByMail.has(mailLc)) return staffByMail.get(mailLc);
-    const n = (name || '').trim().toLowerCase();
-    if(!n) return null;
-    return staffFlat.find(p=>{
-      const full1 = `${p.vorname} ${p.nachname}`.trim().toLowerCase();
-      const full2 = `${p.nachname} ${p.vorname}`.trim().toLowerCase();
-      return full1 === n || full2 === n || full1.includes(n) || full2.includes(n);
-    }) || null;
-  }
-
-  // Melder intern/extern
-  const melderInternCard = document.getElementById('melderInternCard');
-  const melderExternCard = document.getElementById('melderExternCard');
-  const melderInternSelect = document.getElementById('melderInternSelect');
-  melderInternSelect.innerHTML = optionsHTML;
-  // Melder intern SUFU
-  document.getElementById('btnPickMelderIntern')?.addEventListener('click', ()=>{
-    openStaffPicker('Melder intern wählen', (p)=> setSelectToStaff(melderInternSelect, p));
-  });
-
-  // Erfasser SUFU
-  document.getElementById('btnPickErfasser')?.addEventListener('click', ()=>{
-  const sel = document.getElementById('erfasserSelect');
-  openStaffPicker('Erfasser wählen', (p)=> setSelectToStaff(sel, p));
-  });
-
-  // Involvierte Intern SUFU (pro Person)
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.inv-pick-intern');
-    if(!btn) return;
-    const person = btn.closest('.inv-person');
-    if(!person) return;
-    const sel = person.querySelector('.inv-intern-select');
-    if(!sel) return;
-
-    openStaffPicker('Mitarbeiter wählen', (p)=> setSelectToStaff(sel, p));
-  });
-
-  const mTyp = document.getElementById('melder_typ');
-  const mVorP = document.getElementById('melder_vor_P');
-  const mNachP = document.getElementById('melder_nach_P');
-  const mMailP = document.getElementById('melder_mail_P');
-  const mTelP = document.getElementById('melder_tel_P');
-  const mVor = document.getElementById('melder_vor');
-  const mNach = document.getElementById('melder_nach');
-  const mMail = document.getElementById('melder_mail');
-  const mTel = document.getElementById('melder_tel');
-
-  const exFirma = document.getElementById('melderExternFirma');
-  const exVor = document.getElementById('melderExternVor');
-  const exNach = document.getElementById('melderExternNach');
-  const exMail = document.getElementById('melderExternMail');
-  const exTel = document.getElementById('melderExternTel');
-
-  function resetMelderPillars(){
-    mTyp.textContent='—'; mVor.textContent='—'; mNach.textContent='—'; mMail.textContent='—'; mTel.textContent='—';
-    showIf(mVorP,''); showIf(mNachP,''); showIf(mMailP,''); showIf(mTelP,'');
-  }
-  function setMelderIntern(opt){
-    mTyp.textContent='Intern';
-    const v = opt.dataset.vorname||'';
-    const n = opt.dataset.nachname||'';
-    const mail = opt.dataset.mail||'';
-    const tel = opt.dataset.tel||'';
-    mVor.textContent = v||'—';
-    mNach.textContent = n||'—';
-    mMail.textContent = mail||'—';
-    mTel.textContent = tel||'—';
-    showIf(mVorP,v); showIf(mNachP,n); showIf(mMailP,mail); showIf(mTelP,tel);
-  }
-  function setMelderExtern(){
-    mTyp.textContent='Extern';
-    const v = (exVor.value||'').trim();
-    const n = (exNach.value||'').trim();
-    const mail = (exMail.value||'').trim();
-    const tel = (exTel.value||'').trim();
-    mVor.textContent = v||'—';
-    mNach.textContent = n||'—';
-    mMail.textContent = mail||'—';
-    mTel.textContent = tel||'—';
-    showIf(mVorP,v); showIf(mNachP,n); showIf(mMailP,mail); showIf(mTelP,tel);
-  }
-  function clearMelderExtern(){ exFirma.value=''; exVor.value=''; exNach.value=''; exMail.value=''; exTel.value=''; }
-  function clearMelderIntern(){ melderInternSelect.value=''; }
-
-  melderInternSelect.addEventListener('change', ()=>{
-    if(melderInternSelect.value){
-      setCardActive(melderInternCard,true);
-      setCardActive(melderExternCard,false);
-      clearMelderExtern();
-      setMelderIntern(melderInternSelect.selectedOptions[0]);
-    } else {
-      setCardActive(melderInternCard,false);
-      resetMelderPillars();
-    }
-  });
-  function melderExternChanged(){
-    const any = [exFirma,exVor,exNach,exMail,exTel].some(i => (i.value||'').trim().length>0);
-    if(any){
-      setCardActive(melderExternCard,true);
-      setCardActive(melderInternCard,false);
-      clearMelderIntern();
-      setMelderExtern();
-    } else {
-      setCardActive(melderExternCard,false);
-      resetMelderPillars();
-    }
-  }
-  [exFirma,exVor,exNach,exMail,exTel].forEach(el=> el.addEventListener('input', melderExternChanged));
-
-  resetMelderPillars();
-  setCardActive(melderInternCard,false);
-  setCardActive(melderExternCard,false);
-
-  // Erfasser Auswahl
-  const erfasserCard = document.getElementById('erfasserCard');
-  const erfasserSelect = document.getElementById('erfasserSelect');
-  erfasserSelect.innerHTML = optionsHTML;
-
-  const eTyp = document.getElementById('erfasser_typ');
-  const eVorP = document.getElementById('erfasser_vor_P');
-  const eNachP = document.getElementById('erfasser_nach_P');
-  const eMailP = document.getElementById('erfasser_mail_P');
-  const eTelP = document.getElementById('erfasser_tel_P');
-  const eVor = document.getElementById('erfasser_vor');
-  const eNach = document.getElementById('erfasser_nach');
-  const eMail = document.getElementById('erfasser_mail');
-  const eTel = document.getElementById('erfasser_tel');
-
-  function resetErfasser(){
-    eTyp.textContent='—'; eVor.textContent='—'; eNach.textContent='—'; eMail.textContent='—'; eTel.textContent='—';
-    showIf(eVorP,''); showIf(eNachP,''); showIf(eMailP,''); showIf(eTelP,'');
-    setCardActive(erfasserCard,false);
-  }
-  erfasserSelect.addEventListener('change', ()=>{
-    if(!erfasserSelect.value){ resetErfasser(); return; }
-    const opt = erfasserSelect.selectedOptions[0];
-    setCardActive(erfasserCard,true);
-    eTyp.textContent='Intern';
-    const v = opt.dataset.vorname||'';
-    const n = opt.dataset.nachname||'';
-    const mail = opt.dataset.mail||'';
-    const tel = opt.dataset.tel||'';
-    eVor.textContent=v||'—'; eNach.textContent=n||'—'; eMail.textContent=mail||'—'; eTel.textContent=tel||'—';
-    showIf(eVorP,v); showIf(eNachP,n); showIf(eMailP,mail); showIf(eTelP,tel);
-  });
-  resetErfasser();
-
-  // Involvierte (max 3)
-  const MAX_PERSONS = 3;
-  const invRoles = document.getElementById('invRoles');
-  const invHint = document.getElementById('invHint');
-  const addButtons = ()=> Array.from(document.querySelectorAll('.inv-add'));
-  let personCount = 0;
-
-  function roleLabel(role){
-    return ({lokfuehrer:'Lokführer', rangierer:'Rangierer', wagenmeister:'Wagenmeister', andere:'Andere'})[role] || role;
-  }
-  function setLimitUI(){
-    const left = MAX_PERSONS - personCount;
-    invHint.textContent = `Maximal ${MAX_PERSONS} involvierte Personen erfassen (über alle Rollen hinweg). Verfügbar: ${left}.`;
-    const disable = personCount >= MAX_PERSONS;
-    addButtons().forEach(b => b.disabled = disable);
-  }
-
-  invRoles.addEventListener('click', (e)=>{
-    const pill = e.target.closest('.pillar');
-    if(!pill) return;
-    pill.classList.toggle('active');
-    const role = pill.dataset.role;
-    const block = document.querySelector(`[data-role-block="${role}"]`);
-    if(block) block.classList.toggle('is-hidden', !pill.classList.contains('active'));
-  });
-
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.inv-add');
-    if(!btn) return;
-    if(personCount >= MAX_PERSONS){ setLimitUI(); return; }
-    addInvPerson(btn.dataset.role);
-  });
-
-  document.addEventListener('click', (e)=>{
-    const rm = e.target.closest('.inv-remove');
-    if(!rm) return;
-    const person = rm.closest('.inv-person');
-    if(person){ person.remove(); personCount = Math.max(0, personCount-1); setLimitUI(); }
-  });
-
-  function addInvPerson(role){
-    personCount++;
-    const list = document.getElementById(`invList_${role}`);
-    const idx = list.children.length + 1;
-
-    const el = document.createElement('div');
-    el.className = 'inv-person';
-    el.dataset.role = role;
-    el.innerHTML = `
-      <div class="inv-person-header">
-        <div class="inv-badge">${roleLabel(role)} #${idx}</div>
-        <div class="inv-actions">
-          <button type="button" class="btn-secondary inv-remove">Entfernen</button>
-        </div>
-      </div>
-      <div class="row-2">
-        <div class="card is-inactive inv-intern">
-          <div style="font-weight:900;margin-bottom:8px;">Intern</div>
-          <button type="button" class="btn-secondary inv-pick-intern">Intern suchen (SUFU)</button>
-          <select class="inv-intern-select is-hidden">${optionsHTML}</select>
-          <div class="pillars" style="margin-top:12px;grid-template-columns:repeat(3,1fr);">
-            <div class="pillar small locked" style="cursor:default;"><div class="p-label">Typ</div><div class="p-value inv_typ">—</div></div>
-            <div class="pillar small locked" style="cursor:default;"><div class="p-label">Rolle</div><div class="p-value">${roleLabel(role)}</div></div>
-            <div class="pillar small locked is-hidden inv_vorP" style="cursor:default;"><div class="p-label">Vorname</div><div class="p-value inv_vor">—</div></div>
-            <div class="pillar small locked is-hidden inv_nachP" style="cursor:default;"><div class="p-label">Nachname</div><div class="p-value inv_nach">—</div></div>
-            <div class="pillar small locked is-hidden inv_mailP" style="cursor:default;"><div class="p-label">Mail</div><div class="p-value inv_mail">—</div></div>
-            <div class="pillar small locked is-hidden inv_telP" style="cursor:default;"><div class="p-label">Telefon</div><div class="p-value inv_tel">—</div></div>
+    <div class="grid row-2" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Vorfallsdaten</div>
+        <div class="grid row-3">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">IncidentId</div>
+            <input id="incidentId" placeholder="INC-2026-000123" value="INC-2026-000123" />
+            <div class="hint">Eindeutiger Schlüssel (vom Flow)</div>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Ereignis</div>
+            <input id="ereignis" value="Rangierunfall" />
+            <div class="hint">Read-only möglich, kommt aus Meldung</div>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Rolle (wer bearbeitet jetzt)</div>
+            <div class="actor" id="actorSwitch">
+              <div class="pill active" data-actor="EL">Einsatzleitung (EL)</div>
+              <div class="pill" data-actor="RB">Rufbereitschaft (RB)</div>
+            </div>
+            <div class="hint">Status- und Journal-Einträge werden mit dieser Rolle geloggt.</div>
           </div>
         </div>
 
-        <div class="card is-inactive inv-extern">
-  <div style="font-weight:900;margin-bottom:8px;">Extern</div>
-  <input class="inv_firma" type="text" placeholder="Unternehmen (optional)">
-  <div class="row-2" style="margin-top:10px;">
-    <input class="inv_vor_in" type="text" placeholder="Vorname (optional)">
-    <input class="inv_nach_in" type="text" placeholder="Nachname (optional)">
-  </div>
-  <div class="row-2" style="margin-top:10px;">
-    <input class="inv_mail_in" type="email" placeholder="Mail (optional)">
-    <input class="inv_tel_in" type="tel" placeholder="Telefon (optional)">
-  </div>
+        <div class="grid row-3">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Ort (Modus)</div>
+            <select id="ortModus">
+              <option value="bahnhof">Bahnhof</option>
+              <option value="strecke" selected>Strecke</option>
+              <option value="anschluss">Anschluss</option>
+            </select>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Start / Bahnhof</div>
+            <input id="ortStart" value="ZGO – Zug Oberwil" />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Ziel / Anschluss</div>
+            <input id="ortZiel" value="OL – Oensingen" />
+          </div>
+        </div>
 
-  <!-- NEU: Anzeige wie bei Melder extern -->
-  <div class="pillars" style="margin-top:12px;grid-template-columns:repeat(3,1fr);">
-    <div class="pillar small locked" style="cursor:default;"><div class="p-label">Typ</div><div class="p-value inv_typ2">—</div></div>
-    <div class="pillar small locked" style="cursor:default;"><div class="p-label">Rolle</div><div class="p-value">${roleLabel(role)}</div></div>
-
-    <div class="pillar small locked is-hidden inv_firmaP2" style="cursor:default;"><div class="p-label">Unternehmen</div><div class="p-value inv_firmaV2">—</div></div>
-    <div class="pillar small locked is-hidden inv_vorP2" style="cursor:default;"><div class="p-label">Vorname</div><div class="p-value inv_vor2">—</div></div>
-    <div class="pillar small locked is-hidden inv_nachP2" style="cursor:default;"><div class="p-label">Nachname</div><div class="p-value inv_nach2">—</div></div>
-    <div class="pillar small locked is-hidden inv_mailP2" style="cursor:default;"><div class="p-label">Mail</div><div class="p-value inv_mail2">—</div></div>
-    <div class="pillar small locked is-hidden inv_telP2" style="cursor:default;"><div class="p-label">Telefon</div><div class="p-value inv_tel2">—</div></div>
-  </div>
-
-  <div class="hint">Es wird nur angezeigt, was erfasst wurde.</div>
-</div>
-
-    `;
-    list.appendChild(el);
-    setLimitUI();
-  }
-
-// Intern/Extern Umschaltung pro Person (inkl. Anzeige wie bei Melder extern)
-  document.addEventListener('change', (e)=>{
-    const sel = e.target.closest('.inv-intern-select');
-    if(!sel) return;
-    const person = sel.closest('.inv-person');
-    if(!person) return;
-
-    const internCard = person.querySelector('.inv-intern');
-    const externCard = person.querySelector('.inv-extern');
-
-    // Helfer: Intern-Pillars setzen
-    const setInternPillars = (opt)=>{
-      const v = opt?.dataset?.vorname || '';
-      const n = opt?.dataset?.nachname || '';
-      const mail = opt?.dataset?.mail || '';
-      const tel = opt?.dataset?.tel || '';
-
-      person.querySelector('.inv_typ').textContent = 'Intern';
-      person.querySelector('.inv_vor').textContent = v || '—';
-      person.querySelector('.inv_nach').textContent = n || '—';
-      person.querySelector('.inv_mail').textContent = mail || '—';
-      person.querySelector('.inv_tel').textContent = tel || '—';
-
-      showIf(person.querySelector('.inv_vorP'), v);
-      showIf(person.querySelector('.inv_nachP'), n);
-      showIf(person.querySelector('.inv_mailP'), mail);
-      showIf(person.querySelector('.inv_telP'), tel);
-    };
-
-    // Helfer: Extern-Pillars zurücksetzen
-    const resetExternPillars = ()=>{
-      const t2 = person.querySelector('.inv_typ2'); if(t2) t2.textContent = '—';
-      const fv = person.querySelector('.inv_firmaV2'); if(fv) fv.textContent = '—';
-      const v2 = person.querySelector('.inv_vor2'); if(v2) v2.textContent = '—';
-      const n2 = person.querySelector('.inv_nach2'); if(n2) n2.textContent = '—';
-      const m2 = person.querySelector('.inv_mail2'); if(m2) m2.textContent = '—';
-      const te2 = person.querySelector('.inv_tel2'); if(te2) te2.textContent = '—';
-      ['.inv_firmaP2','.inv_vorP2','.inv_nachP2','.inv_mailP2','.inv_telP2'].forEach(s=>{
-        const el = person.querySelector(s); if(el) el.classList.add('is-hidden');
-      });
-    };
-
-    if(sel.value){
-      setCardActive(internCard,true);
-      setCardActive(externCard,false);
-
-      // Extern Inputs leeren (wie bei Melder extern: wenn intern gewählt, extern leer)
-      ['.inv_firma','.inv_vor_in','.inv_nach_in','.inv_mail_in','.inv_tel_in'].forEach(s=>{
-        const i = person.querySelector(s);
-        if(i) i.value = '';
-      });
-      resetExternPillars();
-
-      // Intern-Pillars befüllen
-      const opt = sel.selectedOptions?.[0];
-      setInternPillars(opt);
-    } else {
-      setCardActive(internCard,false);
-      person.querySelector('.inv_typ').textContent = '—';
-      ['.inv_vorP','.inv_nachP','.inv_mailP','.inv_telP'].forEach(s=>{
-        const el = person.querySelector(s); if(el) el.classList.add('is-hidden');
-      });
-    }
-  });
-
-  // Extern-Eingabe pro Person (wie Melder extern)
-  document.addEventListener('input', (e)=>{
-    const person = e.target.closest('.inv-person');
-    if(!person) return;
-    if(!e.target.closest('.inv-extern')) return;
-
-    const internCard = person.querySelector('.inv-intern');
-    const externCard = person.querySelector('.inv-extern');
-
-    const firma = (person.querySelector('.inv_firma')?.value||'').trim();
-    const vor   = (person.querySelector('.inv_vor_in')?.value||'').trim();
-    const nach  = (person.querySelector('.inv_nach_in')?.value||'').trim();
-    const mail  = (person.querySelector('.inv_mail_in')?.value||'').trim();
-    const tel   = (person.querySelector('.inv_tel_in')?.value||'').trim();
-
-    const any = !!(firma || vor || nach || mail || tel);
-
-    // Helfer: Extern-Pillars setzen
-    const setExternPillars = ()=>{
-      const t2 = person.querySelector('.inv_typ2'); if(t2) t2.textContent = 'Extern';
-
-      const fv = person.querySelector('.inv_firmaV2'); if(fv) fv.textContent = firma || '—';
-      const v2 = person.querySelector('.inv_vor2'); if(v2) v2.textContent = vor || '—';
-      const n2 = person.querySelector('.inv_nach2'); if(n2) n2.textContent = nach || '—';
-      const m2 = person.querySelector('.inv_mail2'); if(m2) m2.textContent = mail || '—';
-      const te2= person.querySelector('.inv_tel2');  if(te2) te2.textContent = tel || '—';
-
-      showIf(person.querySelector('.inv_firmaP2'), firma);
-      showIf(person.querySelector('.inv_vorP2'), vor);
-      showIf(person.querySelector('.inv_nachP2'), nach);
-      showIf(person.querySelector('.inv_mailP2'), mail);
-      showIf(person.querySelector('.inv_telP2'), tel);
-    };
-
-    if(any){
-      setCardActive(externCard,true);
-      setCardActive(internCard,false);
-
-      // Intern Select leeren + Intern-Pillars leeren
-      const sel = person.querySelector('.inv-intern-select');
-      if(sel) sel.value = '';
-      const t1 = person.querySelector('.inv_typ'); if(t1) t1.textContent = '—';
-      ['.inv_vorP','.inv_nachP','.inv_mailP','.inv_telP'].forEach(s=>{
-        const el = person.querySelector(s); if(el) el.classList.add('is-hidden');
-      });
-
-      // Extern-Pillars befüllen
-      setExternPillars();
-    } else {
-      setCardActive(externCard,false);
-
-      // Extern-Pillars zurücksetzen
-      const t2 = person.querySelector('.inv_typ2'); if(t2) t2.textContent = '—';
-      ['.inv_firmaP2','.inv_vorP2','.inv_nachP2','.inv_mailP2','.inv_telP2'].forEach(s=>{
-        const el = person.querySelector(s); if(el) el.classList.add('is-hidden');
-      });
-    }
-  });
-
-  setLimitUI();
-
-  // ===== Stationen + Map =====
-  let STATIONS = [];
-  let mapSvg = null;
-  let mapDefaultViewBox = null;
-
-  const mapBox = document.getElementById('mapBox');
-  const mapStatus = document.getElementById('mapStatus');
-
-  function parseNum(val){
-  if(val==null) return null;
-  const s = String(val).trim();
-  if(!s) return null;
-  const m = s.match(/^[0-9.+-]+/);
-  return m ? Number(m[0]) : null;
-}
-
-function ensureViewBox(svg){
-  if(!svg) return;
-  const vb = (svg.getAttribute('viewBox')||'').trim();
-  if(vb) return;
-
-  const w = parseNum(svg.getAttribute('width'));
-  const h = parseNum(svg.getAttribute('height'));
-
-  if(Number.isFinite(w) && Number.isFinite(h) && w>0 && h>0){
-    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  } else {
-    try{
-      const bb = svg.getBBox();
-      svg.setAttribute('viewBox', `${bb.x} ${bb.y} ${bb.width} ${bb.height}`);
-    }catch(e){
-      // viewBox bleibt leer, falls SVG kein BBox liefert
-    }
-  }
-  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
-}
-
-  async function loadStations(){
-    const res = await fetch(URL_STATIONS);
-    STATIONS = await res.json();
-  }
-  async function loadMap(){
-  mapBox.classList.add('loading');
-  const res = await fetch(URL_MAP);
-  const svgText = await res.text();
-  mapBox.innerHTML = svgText;
-  mapSvg = mapBox.querySelector('svg');
-  if(!mapSvg) throw new Error('map.svg enthält kein <svg>');
-
-  mapSvg.style.width = '100%';
-  mapSvg.style.height = '100%';
-  mapSvg.style.pointerEvents = 'none';
-
-  // viewBox sicherstellen (wichtig für Zoom + Ring)
-  ensureViewBox(mapSvg);
-  mapDefaultViewBox = mapSvg.getAttribute('viewBox') || mapDefaultViewBox;
-
-  // 2 Ringe sicherstellen: Start (rot) + Ziel (blau)
-  let rStart = mapBox.querySelector('#mapRingStart');
-  if(!rStart){
-    rStart = document.createElement('div');
-    rStart.id = 'mapRingStart';
-    rStart.className = 'map-ring start';
-    mapBox.appendChild(rStart);
-  }
-  let rZiel = mapBox.querySelector('#mapRingZiel');
-  if(!rZiel){
-    rZiel = document.createElement('div');
-    rZiel.id = 'mapRingZiel';
-    rZiel.className = 'map-ring ziel';
-    mapBox.appendChild(rZiel);
-  }
-
-  mapBox.classList.remove('loading');
-  mapStatus.textContent = 'map.svg: geladen';
-  }
-
-  function findStationElement(svg, station){
-    if(!svg || !station) return null;
-    const code = (station.code||'').toString().trim();
-    const id = (station.id||'').toString().trim();
-    if(code){
-      const el = svg.querySelector(`[data-code="${CSS.escape(code)}"]`);
-      if(el) return el;
-    }
-    if(id){
-      const el = svg.querySelector(`#${CSS.escape(id)}`);
-      if(el) return el;
-    }
-    return null;
-  }
-  function setHighlight(svg, el){
-    if(!svg) return;
-    svg.querySelectorAll('.svg-station-selected').forEach(x=> x.classList.remove('svg-station-selected'));
-    if(el) el.classList.add('svg-station-selected');
-  }
-  function zoomToPosition(svg, pos, padding=60){
-    if(!svg || !pos) return;
-    const x = pos.x - padding;
-    const y = pos.y - padding;
-    const w = pos.width + padding*2;
-    const h = pos.height + padding*2;
-    svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
-  }
-  function zoomToTwoStations(svg, a, b, padding=80){
-    if(!svg || !a || !b) return;
-    const p1 = a.position; const p2 = b.position;
-    if(!p1 || !p2) return;
-    const x1 = Math.min(p1.x, p2.x);
-    const y1 = Math.min(p1.y, p2.y);
-    const x2 = Math.max(p1.x + p1.width,  p2.x + p2.width);
-    const y2 = Math.max(p1.y + p1.height, p2.y + p2.height);
-    svg.setAttribute('viewBox', `${x1-padding} ${y1-padding} ${(x2-x1)+padding*2} ${(y2-y1)+padding*2}`);
-  }
-function resetMapView(){
-  if(mapSvg && mapDefaultViewBox) mapSvg.setAttribute('viewBox', mapDefaultViewBox);
-  if(mapSvg) setHighlight(mapSvg, null);
-  hideAllRings();
-}
-
-function getViewBoxObj(svg){
-  const vb = (svg.getAttribute('viewBox') || '').trim();
-  if(!vb) return null;
-  const p = vb.split(/[\s,]+/).map(Number);
-  if(p.length !== 4 || p.some(n => !Number.isFinite(n))) return null;
-  return {x:p[0], y:p[1], w:p[2], h:p[3]};
-}
-
-function svgToBox(svg, x, y){
-  const vb = getViewBoxObj(svg);
-  if(!vb) return null;
-  const W = mapBox.clientWidth || 380;
-  const H = mapBox.clientHeight || 380;
-  const s = Math.min(W / vb.w, H / vb.h); // meet
-  const ox = (W - vb.w * s) / 2;
-  const oy = (H - vb.h * s) / 2;
-  return { x: ox + (x - vb.x) * s, y: oy + (y - vb.y) * s };
-}
-
-/* ===== Robuste SVG/BBox/Zoom/Marker + Typeahead (Karte) ===== */
-
-function parseMatrix(str){
-  // akzeptiert 'matrix(a b c d e f)' oder 'a b c d e f'
-  if(!str) return [1,0,0,1,0,0];
-  const s = String(str).trim();
-  const m = s.match(/matrix\(([^)]+)\)/i);
-  const raw = (m ? m[1] : s).trim().split(/[\s,]+/).map(Number).filter(n=>Number.isFinite(n));
-  if(raw.length===6) return raw;
-  return [1,0,0,1,0,0];
-}
-function mulM(a,b){
-  // [a,b,c,d,e,f] x [a,b,c,d,e,f]
-  return [
-    a[0]*b[0] + a[2]*b[1],
-    a[1]*b[0] + a[3]*b[1],
-    a[0]*b[2] + a[2]*b[3],
-    a[1]*b[2] + a[3]*b[3],
-    a[0]*b[4] + a[2]*b[5] + a[4],
-    a[1]*b[4] + a[3]*b[5] + a[5]
-  ];
-}
-function applyM(m,p){
-  return {x: m[0]*p.x + m[2]*p.y + m[4], y: m[1]*p.x + m[3]*p.y + m[5]};
-}
-function elementToRootMatrix(el, svg){
-  // Fallback: Transform-Attribute entlang DOM-Kette (nicht perfekt, aber hilfreich für Debug)
-  let cur = el;
-  let M = [1,0,0,1,0,0];
-  while(cur && cur !== svg && cur.getAttribute){
-    const t = cur.getAttribute('transform');
-    if(t){
-      M = mulM(parseMatrix(t), M);
-    }
-    cur = cur.parentNode;
-  }
-  return M;
-}
-function bboxToRoot(el, svg){
-  const bb = getBBoxSafe(el, svg);
-  return bb;
-}
-function getBBoxSafe(el, svg){
-  if(!el || !svg) return null;
-  // Robust: über getBoundingClientRect + inverse ScreenCTM -> SVG Koordinaten (inkl. verschachtelte Transforms)
-  try{
-    const r = el.getBoundingClientRect();
-    const ctm = svg.getScreenCTM();
-    if(!ctm) throw new Error('ScreenCTM fehlt');
-    const inv = ctm.inverse();
-    const pt = svg.createSVGPoint();
-    const corners = [
-      {x:r.left, y:r.top},
-      {x:r.right, y:r.top},
-      {x:r.right, y:r.bottom},
-      {x:r.left, y:r.bottom}
-    ].map(c=>{ pt.x=c.x; pt.y=c.y; const p=pt.matrixTransform(inv); return {x:p.x,y:p.y}; });
-    const xs = corners.map(p=>p.x);
-    const ys = corners.map(p=>p.y);
-    const x1 = Math.min(...xs), x2 = Math.max(...xs);
-    const y1 = Math.min(...ys), y2 = Math.max(...ys);
-    const w = x2-x1, h = y2-y1;
-    if(!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0) throw new Error('BBox ungültig');
-    return {x:x1, y:y1, width:w, height:h};
-  }catch(e){
-    // Fallback: getBBox (ohne Transform)
-    try{
-      const bb = el.getBBox();
-      if(bb && Number.isFinite(bb.width) && Number.isFinite(bb.height) && bb.width>0 && bb.height>0) return {x:bb.x,y:bb.y,width:bb.width,height:bb.height};
-    }catch(_){}
-  }
-  return null;
-}
-function zoomToBBox(svg, bbox, padding=120){
-  if(!svg || !bbox) return false;
-  const x = bbox.x - padding;
-  const y = bbox.y - padding;
-  const w = bbox.width + padding*2;
-  const h = bbox.height + padding*2;
-  if(!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0) return false;
-  svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
-  return true;
-}
-
-function showRingAt(ringId, svg, x, y){
-  const ring = mapBox.querySelector('#'+ringId);
-  if(!ring || !svg) return;
-  const pt = svgToBox(svg, x, y);
-  if(!pt){ ring.style.display='none'; return; }
-  const r = 11;
-  ring.style.left = (pt.x - r) + 'px';
-  ring.style.top  = (pt.y - r) + 'px';
-  ring.style.display = 'block';
-}
-function hideRing(ringId){
-  const ring = mapBox.querySelector('#'+ringId);
-  if(ring) ring.style.display='none';
-}
-function hideAllRings(){
-  hideRing('mapRingStart');
-  hideRing('mapRingZiel');
-}
-
-function getStationByKey(key){
-  const k = (key||'').toString().trim();
-  if(!k) return null;
-  const kl = k.toLowerCase();
-  return STATIONS.find(s=> (s.id||'').toString().toLowerCase()===kl) ||
-         STATIONS.find(s=> (s.code||'').toString().toLowerCase()===kl) ||
-         null;
-}
-
-function focusStationById(stationId){
-  if(!mapSvg) return false;
-  const st = getStationByKey(stationId) || {id:stationId, code:stationId, label:stationId};
-  const el = findStationElement(mapSvg, st);
-  if(!el){
-    mapStatus.textContent = `Station nicht in SVG gefunden: ${stationDisplayWithCode(st)}`;
-    return false;
-  }
-  const bb = getBBoxSafe(el, mapSvg);
-  if(!bb){
-    mapStatus.textContent = `BBox fehlt für Station: ${stationDisplayWithCode(st)}`;
-    return false;
-  }
-  zoomToBBox(mapSvg, bb, 180);
-  showRingAt('mapRingStart', mapSvg, bb.x + bb.width/2, bb.y + bb.height/2);
-  hideRing('mapRingZiel');
-  mapStatus.textContent = `Fokus: ${stationDisplayWithCode(st)}`;
-  return true;
-}
-
-function focusSegmentByIds(startId, zielId){
-  if(!mapSvg) return false;
-  const a = getStationByKey(startId) || {id:startId, code:startId, label:startId};
-  const b = getStationByKey(zielId) || {id:zielId, code:zielId, label:zielId};
-  const elA = findStationElement(mapSvg, a);
-  const elB = findStationElement(mapSvg, b);
-  if(!elA || !elB){
-    mapStatus.textContent = `Segment nicht gefunden (SVG): ${stationDisplayWithCode(a)} ↔ ${stationDisplayWithCode(b)}`;
-    // Fallback: wenn nur eines existiert -> darauf fokussieren
-    if(elA) return focusStationById(a.id || a.code);
-    if(elB) return focusStationById(b.id || b.code);
-    return false;
-  }
-  const bbA = getBBoxSafe(elA, mapSvg);
-  const bbB = getBBoxSafe(elB, mapSvg);
-  if(!bbA || !bbB){
-    mapStatus.textContent = `BBox fehlt für Segment: ${stationDisplayWithCode(a)} ↔ ${stationDisplayWithCode(b)}`;
-    return false;
-  }
-  const x1 = Math.min(bbA.x, bbB.x);
-  const y1 = Math.min(bbA.y, bbB.y);
-  const x2 = Math.max(bbA.x + bbA.width, bbB.x + bbB.width);
-  const y2 = Math.max(bbA.y + bbA.height, bbB.y + bbB.height);
-  const union = {x:x1, y:y1, width:(x2-x1), height:(y2-y1)};
-  zoomToBBox(mapSvg, union, 140);
-  showRingAt('mapRingStart', mapSvg, bbA.x + bbA.width/2, bbA.y + bbA.height/2);
-  showRingAt('mapRingZiel', mapSvg, bbB.x + bbB.width/2, bbB.y + bbB.height/2);
-  mapStatus.textContent = `Strecke: ${stationDisplayWithCode(a)} → ${stationDisplayWithCode(b)}`;
-  return true;
-}
-
-// --- Typeahead helper (nach Muster 'Karte Suche geht 16.04..html') ---
-function norm(s){
-  return (s||'')
-    .toString()
-    .normalize('NFD').replace(/[̀-ͯ]/g,'')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g,' ')
-    .trim();
-}
-function displayName(st){
-  return (st?.label || st?.name || st?.id || '').toString().trim();
-}
-function stationDisplayWithCode(st){
-  const code = (st?.code||'').toString().trim();
-  const name = displayName(st) || '—';
-  return code ? `${code} – ${name}` : name;
-}
-function searchStations(q){
-  const query = (q||'').toString().trim();
-  const qn = norm(query);
-  if(qn.length < 2) return {exact:null, list:[]};
-  const qUpper = query.toUpperCase().trim();
-  const exact = STATIONS.find(s => (s.code||'').toString().toUpperCase().trim() === qUpper) || null;
-  // Treffer: Code oder Name enthält
-  const out = STATIONS.filter(s=>{
-    const c = norm((s.code||'').toString());
-    const n = norm(displayName(s));
-    return (c && c.includes(qn)) || (n && n.includes(qn));
-  });
-  // Sort: exaktes Kürzel zuerst, dann Code, dann Name
-  out.sort((a,b)=>{
-    const ac = (a.code||'').toString();
-    const bc = (b.code||'').toString();
-    if(exact){
-      if(a===exact && b!==exact) return -1;
-      if(b===exact && a!==exact) return 1;
-    }
-    const ccmp = ac.localeCompare(bc,'de-CH');
-    if(ccmp!==0) return ccmp;
-    return displayName(a).localeCompare(displayName(b),'de-CH');
-  });
-  return {exact, list: out.slice(0, 120)};
-}
-
-function bindTypeahead(inputEl, listEl, onPick){
-  if(!inputEl || !listEl) return;
-  let items = [];
-  let active = -1;
-  let ignoreBlur = false;
-
-  const close = ()=>{ listEl.style.display='none'; listEl.innerHTML=''; items=[]; active=-1; };
-
-  const render = (q)=>{
-    const {list} = searchStations(q);
-    // Keine Auto-Übernahme beim Tippen: Auswahl erst per Klick oder Enter.
-    if(list.length===0){ close(); return; }
-    listEl.innerHTML='';
-    items = list;
-    active = -1;
-    list.forEach((st, idx)=>{
-      const div = document.createElement('div');
-      div.className = 'ta-item';
-      div.innerHTML = `<div style="font-weight:900;">${escapeHtml(stationDisplayWithCode(st))}</div>` +
-                      `<div class="ta-small">${escapeHtml((st.id||'').toString())}</div>`;
-      div.addEventListener('mousedown', ()=>{ ignoreBlur=true; });
-      div.addEventListener('click', ()=>{
-        onPick(st, {source:'click'});
-        inputEl.value = stationDisplayWithCode(st);
-        close();
-        setTimeout(()=>{ ignoreBlur=false; }, 0);
-      });
-      listEl.appendChild(div);
-    });
-    listEl.style.display='block';
-  };
-
-  inputEl.addEventListener('input', ()=>{
-    const q = inputEl.value || '';
-    if(q.trim().length < 2){ close(); return; }
-    render(q);
-  });
-
-  inputEl.addEventListener('keydown', (e)=>{
-    if(listEl.style.display!=='block') return;
-    const max = items.length-1;
-    if(e.key==='ArrowDown'){
-      e.preventDefault();
-      active = Math.min(max, active+1);
-    } else if(e.key==='ArrowUp'){
-      e.preventDefault();
-      active = Math.max(0, active-1);
-    } else if(e.key==='Enter'){
-      e.preventDefault();
-      const st = (active>=0 && items[active]) ? items[active] : items[0];
-      if(st){
-        onPick(st, {source:'enter'});
-        inputEl.value = stationDisplayWithCode(st);
-      }
-      close();
-      return;
-    } else if(e.key==='Escape'){
-      e.preventDefault();
-      close();
-      return;
-    }
-    // UI markieren
-    Array.from(listEl.children).forEach((c,i)=>c.classList.toggle('active', i===active));
-    if(active>=0){
-      const el = listEl.children[active];
-      el?.scrollIntoView({block:'nearest'});
-    }
-  });
-
-  inputEl.addEventListener('blur', ()=>{
-    setTimeout(()=>{
-      if(ignoreBlur) return;
-      // Keine Auto-Übernahme beim Verlassen: Auswahl bleibt bewusst manuell.
-      close();
-    }, 140);
-  });
-
-  // Schliessen bei Klick ausserhalb
-  document.addEventListener('click', (e)=>{
-    if(e.target===inputEl || listEl.contains(e.target)) return;
-    close();
-  });
-}
-
-document.getElementById('btnMapReset').addEventListener('click', resetMapView);
-
-  function openStationPicker(title, cb){
-    const ov = document.createElement('div');
-    ov.className = 'overlay';
-    ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.remove(); });
-    const box = document.createElement('div');
-    box.className = 'overlay-box';
-    ov.appendChild(box);
-
-    box.innerHTML = `
-      <div style="font-weight:900;margin-bottom:10px;">${escapeHtml(title)}</div>
-      <input class="sufu-input" placeholder="Suche nach Code oder Name …">
-      <div class="sufu-list"></div>
-      <div style="display:flex;gap:10px;margin-top:10px;justify-content:flex-end;">
-        <button type="button" class="btn-secondary">Schliessen</button>
+        <div class="grid row-2">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Kurzbeschreibung</div>
+            <textarea id="summary" rows="3">Wagen entgleist im Rangierbereich. Schaden unbekannt. Kunde informiert.</textarea>
+            <div class="hint">Kommt aus Meldung + Updates.</div>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Karte (Anzeige)</div>
+            <div class="map" id="mapBox"><div class="txt">Karte wird geladen …</div></div>
+            <div class="hint">Quelle: <code>assets/map.svg</code>. Anzeige passt sich an iPhone/iPad an.</div>
+          </div>
+        </div>
       </div>
-    `;
 
-    const input = box.querySelector('.sufu-input');
-    const list = box.querySelector('.sufu-list');
-    const closeBtn = box.querySelector('.btn-secondary');
-    closeBtn.onclick = ()=> ov.remove();
+      <div>
+        <div class="section-title" style="margin-top:0"><div>Mitarbeitende kontaktiert (EL/RB)</div></div>
+        <div class="card active" style="margin-top:14px">
+          <div class="subhead" style="margin-top:0">Kontakte (schnell markieren)</div>
+          <div class="chips" id="contactChips">
+            <div class="chip2" data-key="EL">Einsatzleitung informiert</div>
+            <div class="chip2" data-key="RB">Rufbereitschaft informiert</div>
+            <div class="chip2" data-key="EVU">EVU kontaktiert</div>
+            <div class="chip2" data-key="INF">Infrastruktur kontaktiert</div>
+            <div class="chip2" data-key="KUN">Kunde kontaktiert</div>
+            <div class="chip2" data-key="SICH">Sicherheitsabteilung informiert</div>
+          </div>
+          <div class="hint">Tippen = kontaktiert. Wird in der Chronologie protokolliert (mit Rolle EL/RB).</div>
 
-    function render(q){
-      q = (q||'').trim().toLowerCase();
-      list.innerHTML = '';
+          <div class="subhead">Zusätzliche Kontaktperson (frei)</div>
+          <div class="grid row-3">
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Name</div>
+              <input id="freeContactName" placeholder="Vorname Nachname" />
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Telefon / Mail</div>
+              <input id="freeContactTel" placeholder="+41 ... / mail@..." />
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Organisation / Rolle</div>
+              <input id="freeContactOrg" placeholder="z.B. Kunde / Leitstelle" />
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <div style="font-weight:900;margin-bottom:6px">Notiz (Kontakt)</div>
+            <textarea id="freeContactNote" rows="3" placeholder="Was wurde besprochen?"></textarea>
+          </div>
+        </div>
 
-      let filtered;
-      if(!q){
-        filtered = STATIONS.slice(0, 200);
-      } else {
-        filtered = STATIONS.filter(s=>{
-          const code = (s.code||'').toString().toLowerCase();
-          const label = (s.label||'').toString().toLowerCase();
-          return code.includes(q) || label.includes(q);
-        }).slice(0, 400);
+        <div class="section-title"><div>Status (EL/RB)</div></div>
+        <div class="card" style="margin-top:14px" id="statusCard">
+          <div class="subhead" style="margin-top:0">Schnellstatus</div>
+          <div class="pillars" id="statusPillars">
+            <div class="pillar active" data-status="eingegangen"><span class="mini badge">1</span>
+              <div class="p-label">Eingangsstatus</div>
+              <div class="p-value">Eingegangen</div>
+            </div>
+            <div class="pillar" data-status="in_bearbeitung"><span class="mini badge">2</span>
+              <div class="p-label">Bearbeitung</div>
+              <div class="p-value">In Bearbeitung</div>
+            </div>
+            <div class="pillar" data-status="beim_kunden"><span class="mini badge">3</span>
+              <div class="p-label">Entscheidung</div>
+              <div class="p-value">Liegt beim Kunden</div>
+            </div>
+            <div class="pillar" data-status="massnahmen_laufen"><span class="mini badge">4</span>
+              <div class="p-label">Massnahmen</div>
+              <div class="p-value">Angesetzt / Laufen</div>
+            </div>
+            <div class="pillar" data-status="abgeschlossen"><span class="mini badge">5</span>
+              <div class="p-label">Abschluss</div>
+              <div class="p-value">Abgeschlossen</div>
+            </div>
+          </div>
+
+          <div class="subhead">Zeitstempel</div>
+          <div class="grid row-3">
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Kunde kontaktiert</div>
+              <input id="tsKunde" type="datetime-local" />
+              <div class="hint">Wird als Timeline-Eintrag geloggt.</div>
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Ausrücken</div>
+              <input id="tsAus" type="datetime-local" />
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Eintreffen</div>
+              <input id="tsEin" type="datetime-local" />
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:12px">
+            <div style="font-weight:900;margin-bottom:6px">Aktueller Status (Text)</div>
+            <input id="statusText" value="RB ist informiert, erste Abklärungen laufen." />
+            <div class="hint">Kommt in SharePoint Spalte "StatusText".</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Massnahmen & Empfehlungen (aus Meldung übernehmen)</div></div>
+
+    <div class="grid row-2" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Empfohlene Massnahmen (aus Meldung)</div>
+        <div class="chips" id="recChips"></div>
+        <div class="hint">Tippen toggelt: offen → umgesetzt → blockiert → offen. "umgesetzt" wird in Chronologie geloggt.</div>
+
+        <div class="subhead">Umgesetzte Massnahmen (Text / Journal)</div>
+        <div class="field">
+          <textarea id="doneNotes" rows="4" placeholder="z.B. 08:10 Railopsperre gesetzt, 08:15 Kunde informiert"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="subhead" style="margin-top:0">Fall übergeben / Eskalation</div>
+        <div class="grid row-2">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Übergeben an</div>
+            <input id="handoverTo" placeholder="z.B. Sicherheitsabteilung / Kunde / EVU" />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Zeitpunkt</div>
+            <input id="handoverAt" type="datetime-local" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Grund / Status Update</div>
+          <textarea id="handoverReason" rows="6" placeholder="Warum übergeben? Welche nächsten Schritte?"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Erstmeldung abgeschlossen / Entscheidungsgrundlagen</div></div>
+
+    <div class="grid row-3" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Leitstellenadresse (aus Entscheidungsbaum)</div>
+        <div class="field">
+          <div style="font-weight:900;margin-bottom:6px">Leitstellenadresse / Kontakt</div>
+          <textarea id="leitstelle" rows="6" placeholder="Wird aus Entscheidungsbaum übernommen (z.B. E-Mail, Telefon, Adresse)"></textarea>
+          <div class="hint">Ziel: je Ereignisart/Variante/EVU automatisch vorbefüllen.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="subhead" style="margin-top:0">Ansprechpartner vor Ort</div>
+        <div class="field">
+          <div style="font-weight:900;margin-bottom:6px">Name</div>
+          <input id="apName" placeholder="Vorname Nachname" />
+        </div>
+        <div class="grid row-2" style="margin-top:10px">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Telefon</div>
+            <input id="apTel" placeholder="+41 ..." />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Firma / Funktion</div>
+            <input id="apFirma" placeholder="z.B. Kunde / Rangierleiter" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Abmachungen / Entscheide</div>
+          <textarea id="apNotes" rows="5" placeholder="z.B. Kunde entscheidet über..."></textarea>
+        </div>
+      </div>
+
+      <div class="card" id="followCard">
+        <div class="subhead" style="margin-top:0">
+          <div class="traffic">
+            <span id="followLamp" class="lamp"></span>
+            <span>Nachfassen – Kunde reagiert bisher nicht</span>
+            <span class="badge" id="followBadge">—</span>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:0">
+          Erstmeldung und Ereignisbearbeitung durch MEV abgeschlossen. Dieses Feld dient dem Nachfassen bei ausstehenden Kundenentscheiden.
+        </div>
+
+        <div class="grid row-2" style="margin-top:10px">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Letztes Nachfassen</div>
+            <input id="followLast" type="datetime-local" />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Nächstes Nachfassen (automatisch +7 Tage)</div>
+            <input id="followNext" type="datetime-local" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Status / Ergebnis</div>
+          <textarea id="followNote" rows="5" placeholder="z.B. Kunde reagiert nicht seit 14 Tagen, Erinnerung per Mail gesendet."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;justify-content:flex-end">
+          <button type="button" class="btn-secondary" id="btnFollowResolve">Kunde hat reagiert (Nachfassen beenden)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Verlauf (Timeline / Journal)</div></div>
+
+    <div class="grid row-2" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Chronologie</div>
+        <div class="timeline" id="timeline"></div>
+        <div class="hint">In echt: append-only Journal in SharePoint (IncidentLog oder JSON-Dateien pro Eintrag).</div>
+      </div>
+
+      <div class="card">
+        <div class="subhead" style="margin-top:0">Technik / Sync</div>
+        <div class="field">
+          <div style="font-weight:900;margin-bottom:6px">Letzte Synchronisation</div>
+          <div class="mono" id="syncInfo">—</div>
+          <div class="hint">Antwort vom Flow (UpdateIncident) hier anzeigen.</div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Payload Vorschau (Demo)</div>
+          <textarea class="mono" id="payloadPreview" rows="18" spellcheck="false"></textarea>
+          <div class="hint">Nur zur Demonstration / Debug (später ausblenden).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="hint">v4: Status ↔ Nachfassen gekoppelt + Nachfassen-Ampel.</div>
+      <div class="mono">GitHub Pages ready (statisch) · später: GetIncident/UpdateIncident via Power Automate</div>
+    </div>
+  </div>
+
+  <script>
+    const statusPillars = document.getElementById('statusPillars');
+    const recChips = document.getElementById('recChips');
+    const contactChips = document.getElementById('contactChips');
+    const payloadPreview = document.getElementById('payloadPreview');
+    const syncInfo = document.getElementById('syncInfo');
+    const actorSwitch = document.getElementById('actorSwitch');
+    const timeline = document.getElementById('timeline');
+
+    const followLast = document.getElementById('followLast');
+    const followNext = document.getElementById('followNext');
+    const followNote = document.getElementById('followNote');
+    const followLamp = document.getElementById('followLamp');
+    const followBadge = document.getElementById('followBadge');
+    const btnFollowResolve = document.getElementById('btnFollowResolve');
+
+    const state = {
+      actor: 'EL',
+      timeline: [],
+      recommended: [
+        {key:'KUN', label:'KUN – Kunde informieren', status:'offen'},
+        {key:'FOT', label:'FOT – Fotos aufnehmen', status:'offen'},
+        {key:'SIC', label:'SIC – Ereignisort sichern', status:'offen'},
+        {key:'DOK', label:'DOK – Dokumentation / Protokoll', status:'offen'},
+        {key:'ROS', label:'ROS – Railopsperre', status:'offen'}
+      ]
+    };
+
+    function escapeHtml(s){
+      return String(s||'')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#39;');
+    }
+
+    function nowTime(){
+      return new Date().toLocaleString('de-CH');
+    }
+
+    function addTimeline(kind, text, sub, cls){
+      state.timeline.unshift({t: new Date().toISOString(), kind, text, sub, cls: cls||'info', actor: state.actor});
+      renderTimeline();
+    }
+
+    function renderTimeline(){
+      timeline.innerHTML = '';
+      if(state.timeline.length === 0){
+        const d = document.createElement('div');
+        d.className = 't-item info';
+        d.innerHTML = `<div class="t-time">—</div><div class="t-text">Noch keine Einträge</div><div class="t-sub">Beim Speichern werden Änderungen geloggt.</div>`;
+        timeline.appendChild(d);
+        return;
       }
-
-      filtered.sort((a,b)=>{
-        const ac = (a.code||'').toString();
-        const bc = (b.code||'').toString();
-        if(ac && bc) return ac.localeCompare(bc,'de-CH');
-        return (a.label||'').toString().localeCompare((b.label||'').toString(),'de-CH');
-      });
-
-      for(const s of filtered){
-        const code = (s.code||'').toString().trim();
-        const label = (s.label||'').toString().trim();
-        const item = document.createElement('div');
-        item.className = 'sufu-item';
-        item.innerHTML = `
-          <div style="font-weight:900;">${escapeHtml(code ? (code + ' – ') : '')}${escapeHtml(label || '—')}</div>
-          <div class="sufu-small">${escapeHtml(s.id||'')}</div>
+      state.timeline.forEach(item => {
+        const el = document.createElement('div');
+        el.className = `t-item ${item.cls}`;
+        const when = new Date(item.t).toLocaleString('de-CH');
+        el.innerHTML = `
+          <div class="t-time">${when} · ${item.actor}</div>
+          <div class="t-text">${escapeHtml(item.text)}</div>
+          <div class="t-sub">${escapeHtml(item.sub||'')}</div>
         `;
-        item.onclick = ()=>{ ov.remove(); cb(s); };
-        list.appendChild(item);
+        timeline.appendChild(el);
+      });
+    }
+
+    function activeStatus(){
+      return statusPillars.querySelector('.pillar.active')?.dataset.status || 'eingegangen';
+    }
+
+    function labelStatus(s){
+      return ({
+        eingegangen:'Eingegangen',
+        in_bearbeitung:'In Bearbeitung',
+        beim_kunden:'Liegt beim Kunden',
+        massnahmen_laufen:'Massnahmen laufen',
+        abgeschlossen:'Abgeschlossen'
+      })[s] || s;
+    }
+
+    function setStatus(statusKey, silent){
+      const target = statusPillars.querySelector(`.pillar[data-status="${statusKey}"]`);
+      if(!target) return;
+      const prev = activeStatus();
+      [...statusPillars.querySelectorAll('.pillar')].forEach(x=>x.classList.toggle('active', x===target));
+      const next = activeStatus();
+      if(!silent && prev !== next){
+        addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus(next)}`, '', 'info');
       }
-      if(filtered.length === 0){
-        const item = document.createElement('div');
-        item.className = 'sufu-item';
-        item.innerHTML = '<div style="font-weight:900;">Kein Treffer</div>';
-        list.appendChild(item);
+      renderPreview();
+    }
+
+    // ===== Follow-up defaults: +7 Tage =====
+    function setFollowupDefault(){
+      if(!followNext || followNext.value) return;
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      followNext.value = d.toISOString().slice(0,16);
+    }
+
+    // ===== Follow-up active? =====
+    function followupActive(){
+      const a = (followLast?.value||'').trim();
+      const b = (followNext?.value||'').trim();
+      const c = (followNote?.value||'').trim();
+      return !!(a || b || c);
+    }
+
+    // ===== Ampel =====
+    function setLamp(cls){
+      followLamp.classList.remove('green','yellow','red');
+      if(cls) followLamp.classList.add(cls);
+    }
+
+    function updateFollowupUi(){
+      setFollowupDefault();
+
+      // Status-Kopplung: sobald Nachfassen aktiv und nicht abgeschlossen -> Status beim Kunden
+      if(followupActive() && activeStatus() !== 'abgeschlossen'){
+        if(activeStatus() !== 'beim_kunden'){
+          setStatus('beim_kunden', true);
+          addTimeline('auto', 'Status automatisch gesetzt: Liegt beim Kunden', 'Grund: Nachfassen aktiv', 'info');
+        }
       }
-    }
 
-    input.addEventListener('input', ()=> render(input.value));
-    render('');
-    document.body.appendChild(ov);
-    input.focus();
-  }
+      // Ampel-Logik
+      const nextStr = (followNext?.value||'').trim();
+      const note = (followNote?.value||'').trim();
 
-  // Ort-Pillars
-  const ortPillars = document.getElementById('ortPillars');
-  const ortBahnhof = document.getElementById('ortBahnhof');
-  const ortStrecke = document.getElementById('ortStrecke');
-  const ortAnschluss = document.getElementById('ortAnschluss');
+      if(!followupActive()){
+        setLamp('green');
+        followBadge.textContent = 'Kein Nachfassen offen';
+        return;
+      }
 
-  let ortSelection = { bahnhof:null, zugziel:null, start:null, ziel:null, anschluss:null };
-
-  ortPillars.addEventListener('click', (e)=>{
-    const p = e.target.closest('.pillar');
-    if(!p) return;
-    const ort = p.dataset.ort;
-    [...ortPillars.querySelectorAll('.pillar')].forEach(x=> x.classList.toggle('active', x.dataset.ort === ort));
-    ortBahnhof.classList.toggle('is-hidden', ort !== 'bahnhof');
-    ortStrecke.classList.toggle('is-hidden', ort !== 'strecke');
-    ortAnschluss.classList.toggle('is-hidden', ort !== 'anschluss');
-  });
-
-  function setViewText(elId, station){
-    const el = document.getElementById(elId);
-    if(!station){ el.textContent = '—'; return; }
-    const code = (station.code||'').toString().trim();
-    const label = (station.label||'').toString().trim();
-    el.textContent = code ? `${code} – ${label}` : (label||'—');
-  }
-
-  // Bahnhof
-// Strecke
-// Anschluss
-// Zug/Fahrzeug
-  const zP = document.getElementById('zugfahrzeugPillars');
-  const zIn = document.getElementById('zugfahrzeugInput');
-  const zHi = document.getElementById('zugfahrzeugHint');
-  let zugMode = '';
-  zP.addEventListener('click', (e)=>{
-    const p = e.target.closest('.pillar');
-    if(!p) return;
-    zugMode = p.dataset.mode;
-    [...zP.querySelectorAll('.pillar')].forEach(x => x.classList.toggle('active', x.dataset.mode === zugMode));
-    if(zugMode==='zug'){ zIn.placeholder='Zugnummer eingeben'; zHi.textContent='Zugnummer gewählt (grün).'; }
-    if(zugMode==='lok'){ zIn.placeholder='Loknummer eingeben'; zHi.textContent='Loknummer gewählt (grün).'; }
-    if(zugMode==='wagen'){ zIn.placeholder='Wagennummer eingeben (optional mehrere mit Komma)'; zHi.textContent='Wagennummer gewählt (grün).'; }
-  });
-
-  // ===== Entscheidungsbaum / Entscheidungen =====
-  const evWrap = document.getElementById('evPillars');
-  const varSection = document.getElementById('varSection');
-  const varWrap = document.getElementById('varPillars');
-  const evKeyEl = document.getElementById('ev_key');
-  const varKeyEl = document.getElementById('var_key');
-
-  const evuSelect = document.getElementById('evu_select');
-  const fuehrendView = document.getElementById('fuehrend_view');
-  const fuehrendHint = document.getElementById('fuehrend_hint');
-  const overrideToggle = document.getElementById('override_toggle');
-  const autoBadge = document.getElementById('autoBadge');
-  const sourceView = document.getElementById('source_view');
-  const flagsWrap = document.getElementById('flags_pillars');
-
-  const rbCard = document.getElementById('rb_card');
-  const rbName = document.getElementById('rb_name');
-  const rbMail = document.getElementById('rb_mail');
-  const rbTel  = document.getElementById('rb_tel');
-  const rbZeit = document.getElementById('rb_zeit');
-  const rbHint = document.getElementById('rb_hint');
-
-  const vorgehenWrap = document.getElementById('vorgehenPillars');
-  const vorgehenHint = document.getElementById('vorgehenHint');
-  let massnahmenEmpfohlen = {}; // wird aus massnahmen_global + massnahmen_evu berechnet
-  function computeMassnahmen(variant, evuId){
-  if(!variant) return {};
-
-  // Basis: global
-  const base = {...(variant.massnahmen_global || {})};
-
-  // EVU-spezifisch add/remove
-  const evuBlock = (variant.massnahmen_evu || {})[evuId] || null;
-  if(evuBlock){
-    const add = evuBlock.add || {};
-    const remove = evuBlock.remove || {};
-
-    for(const k of Object.keys(remove)){
-      delete base[k];
-    }
-    for(const k of Object.keys(add)){
-      base[k] = true;
-    }
-  }
-  return base;
-}
-
-// === Typeahead initialisieren (Bahnhof / Zugziel / Strecke / Anschluss) ===
-const taBahnhof = document.getElementById('taBahnhof');
-const taBahnhofList = document.getElementById('taBahnhofList');
-const taZugziel = document.getElementById('taZugziel');
-const taZugzielList = document.getElementById('taZugzielList');
-const taStart = document.getElementById('taStart');
-const taStartList = document.getElementById('taStartList');
-const taZiel = document.getElementById('taZiel');
-const taZielList = document.getElementById('taZielList');
-const taAnschluss = document.getElementById('taAnschluss');
-const taAnschlussList = document.getElementById('taAnschlussList');
-
-// Bahnhof (fokussiert + roter Ring)
-bindTypeahead(taBahnhof, taBahnhofList, (st)=>{
-  ortSelection.bahnhof = st;
-  setViewText('viewBahnhof', st);
-  focusStationById(st.id || st.code);
-});
-
-// Zugziel (nur Auswahl, kein Kartenfokus)
-bindTypeahead(taZugziel, taZugzielList, (st)=>{
-  ortSelection.zugziel = st;
-  setViewText('viewZugziel', st);
-});
-
-// Strecke Start
-bindTypeahead(taStart, taStartList, (st)=>{
-  ortSelection.start = st;
-  setViewText('viewStart', st);
-  if(ortSelection.ziel){
-    focusSegmentByIds((ortSelection.start.id||ortSelection.start.code), (ortSelection.ziel.id||ortSelection.ziel.code));
-  } else {
-    focusStationById(st.id || st.code);
-    hideRing('mapRingZiel');
-  }
-});
-
-// Strecke Ziel
-bindTypeahead(taZiel, taZielList, (st)=>{
-  ortSelection.ziel = st;
-  setViewText('viewZiel', st);
-  if(ortSelection.start){
-    focusSegmentByIds((ortSelection.start.id||ortSelection.start.code), (ortSelection.ziel.id||ortSelection.ziel.code));
-  } else {
-    // Ziel einzeln: blauer Ring
-    if(mapSvg){
-      const el = findStationElement(mapSvg, st);
-      if(el){
-        const bb = getBBoxSafe(el, mapSvg);
-        if(bb){
-          zoomToBBox(mapSvg, bb, 180);
-          showRingAt('mapRingZiel', mapSvg, bb.x + bb.width/2, bb.y + bb.height/2);
-          hideRing('mapRingStart');
-          mapStatus.textContent = `Fokus (Ziel): ${stationDisplayWithCode(st)}`;
+      // Wenn ein nächstes Nachfassen gesetzt ist
+      if(nextStr){
+        const next = new Date(nextStr);
+        const now = new Date();
+        if(isNaN(next.getTime())){
+          setLamp('yellow');
+          followBadge.textContent = 'Nachfassen geplant';
+          return;
+        }
+        if(next < now){
+          setLamp('red');
+          followBadge.textContent = 'Überfällig';
         } else {
-          mapStatus.textContent = `BBox fehlt für Ziel: ${stationDisplayWithCode(st)}`;
+          // gelb wenn geplant / grün wenn "Ergebnis" notiert? -> wir bleiben gelb (aktiv, aber nicht überfällig)
+          setLamp('yellow');
+          const days = Math.ceil((next - now) / (1000*60*60*24));
+          followBadge.textContent = `Nächstes Nachfassen in ${days} Tag(en)`;
         }
       } else {
-        mapStatus.textContent = `Ziel nicht in SVG gefunden: ${stationDisplayWithCode(st)}`;
+        setLamp('yellow');
+        followBadge.textContent = 'Nachfassen aktiv';
+      }
+
+      // optionaler Hinweis in Badge wenn Note existiert
+      if(note && followBadge.textContent.indexOf('·')<0){
+        followBadge.textContent += ' · Notiz vorhanden';
       }
     }
-  }
-});
 
-// Anschluss (fokussiert + roter Ring)
-bindTypeahead(taAnschluss, taAnschlussList, (st)=>{
-  ortSelection.anschluss = st;
-  setViewText('viewAnschluss', st);
-  focusStationById(st.id || st.code);
-});
+    // Nachfassen beenden: Felder leeren + Status zurück auf In Bearbeitung (sofern nicht abgeschlossen)
+    btnFollowResolve.addEventListener('click', ()=>{
+      const wasActive = followupActive();
+      followLast.value = '';
+      followNote.value = '';
+      // next bleibt bewusst leer, wird beim nächsten Aktivieren wieder +7 gesetzt
+      followNext.value = '';
+      updateFollowupUi();
 
-function renderVorgehen(variant){
-  if(!vorgehenWrap) return;
-  const vorgSection = document.getElementById('vorgehen_section');
+      if(wasActive){
+        addTimeline('follow', 'Nachfassen beendet: Kunde hat reagiert', 'Nachfassen-Felder zurückgesetzt', 'done');
+      }
 
-  if(!variant){
-    massnahmenEmpfohlen = {};
-    vorgehenWrap.innerHTML = '<div class="hint">—</div>';
-    if(vorgehenHint) vorgehenHint.textContent = 'Wähle Ereignisart und Variante.';
-    vorgSection?.classList.add('is-hidden');
-    return;
-  }
+      if(activeStatus() !== 'abgeschlossen'){
+        setStatus('in_bearbeitung', true);
+        addTimeline('status', 'Status gesetzt: In Bearbeitung', 'Kunde hat reagiert', 'info');
+      }
+      renderPreview();
+    });
 
-  const evu = getSelectedEvu();
-  massnahmenEmpfohlen = computeMassnahmen(variant, evu.id);
+    // Actor switch
+    actorSwitch.addEventListener('click', (e)=>{
+      const pill = e.target.closest('.pill');
+      if(!pill) return;
+      state.actor = pill.dataset.actor;
+      [...actorSwitch.querySelectorAll('.pill')].forEach(p=>p.classList.toggle('active', p===pill));
+      addTimeline('actor', 'Bearbeitung gewechselt', `Aktuell: ${state.actor}`, 'info');
+      renderPreview();
+    });
 
-  const legend = (TREE?.meta?.kuerzel_legende) || {};
-  const keys = Object.keys(massnahmenEmpfohlen).filter(k => massnahmenEmpfohlen[k] === true);
-
-  if(keys.length === 0){
-    vorgehenWrap.innerHTML = '<div class="hint">Keine zusätzlichen Schritte definiert.</div>';
-    if(vorgehenHint) vorgehenHint.textContent = `EVU: ${evu.id}`;
-    vorgSection?.classList.add('is-hidden');
-    return;
-  }
-  vorgSection?.classList.remove('is-hidden');
-
-  vorgehenWrap.innerHTML = keys.map(k => {
-    const meta = legend[k] || {label:k, beschreibung:''};
-    const label = meta.label || k;
-    const desc = meta.beschreibung || '';
-    return `
-      <div class="pillar locked" style="cursor:default;">
-        <div class="p-label">${k}</div>
-        <div class="p-value">${label}</div>
-        ${desc ? `<div class="hint">${desc}</div>` : ``}
-      </div>
-    `;
-  }).join('');
-
-  if(vorgehenHint) vorgehenHint.textContent = `EVU: ${evu.id} · Quelle: massnahmen_global + massnahmen_evu`;
-}
-  let TREE = null;
-  let events = [];
-  let selectedEvent = null;
-
-  function setManualMode(on){
-    autoBadge.textContent = on ? 'Manuell' : 'Auto';
-    [...flagsWrap.querySelectorAll('.pillar')].forEach(p => p.classList.toggle('locked', !on));
-  }
-  function setFlag(flag, on){
-    const p = flagsWrap.querySelector(`.pillar[data-flag="${flag}"]`);
-    if(p) p.classList.toggle('active', !!on);
-  }
-
-  function renderFlags(flags){
-    const head = document.getElementById('bewertung_head');
-    let any = false;
-    ['EL','RB','FS','EK'].forEach(k=>{
-      const p = flagsWrap.querySelector(`.pillar[data-flag="${k}"]`);
+    // Status pillars (manuell)
+    statusPillars.addEventListener('click', (e)=>{
+      const p = e.target.closest('.pillar');
       if(!p) return;
-      const active = !!flags?.[k];
-      p.classList.toggle('active', active);
-      p.classList.toggle('flag-unused', !active);
-      if(active) any = true;
-    });
-    flagsWrap.classList.toggle('is-empty', !any);
-    head?.classList.toggle('is-hidden', !any);
-    updateConditionalDecisionBlocks(flags || {});
-  }
-
-  function updateConditionalDecisionBlocks(flags){
-    const rbHead = document.getElementById('rb_head');
-    const rbNeeded = !!flags.RB;
-    rbHead?.classList.toggle('is-hidden', !rbNeeded);
-    rbCard?.classList.toggle('is-hidden', !rbNeeded);
-  }
-
-  function renderInitialHiddenEvaluation(){
-    renderFlags({EL:false,RB:false,FS:false,EK:false});
-    document.getElementById('vorgehen_section')?.classList.add('is-hidden');
-  }
-  function setActivePillar(container, attr, value){
-    [...container.querySelectorAll('.pillar')].forEach(p=> p.classList.toggle('active', p.getAttribute(attr) === value));
-  }
-
-  flagsWrap.addEventListener('click', (e)=>{
-    if(!overrideToggle.checked) return;
-    const p = e.target.closest('.pillar');
-    if(!p) return;
-    p.classList.toggle('active');
-  });
-
-  function getSelectedEvu(){
-    const id = evuSelect.value || (TREE?.default?.evu ?? 'MEV');
-    const list = TREE?.evu || [];
-    return list.find(x=> x.id === id) || list.find(x=> x.id === 'MEV') || {id:'MEV',label:'MEV',verantwortlich:'MEV'};
-  }
-
-  function findVariant(evKey, varKey){
-    if(!TREE) return null;
-    const ev = (TREE.ereignisse || []).find(e=> e.key === evKey);
-    if(!ev) return null;
-    const v = (ev.varianten || []).find(x=> x.key === varKey);
-    if(!v) return null;
-    return {event: ev, variant: v};
-  }
-
-  function computeFuehrend(variant){
-    if(!TREE || !variant) return {text:'—', hint:'Ereignisart/Variante fehlt'};
-    const evu = getSelectedEvu();
-    let lead = '';
-    if(variant.fuehrend === 'MEV'){
-      lead = 'MEV';
-    } else {
-      lead = evu.verantwortlich || evu.id || evu.label;
-    }
-    const ov = variant.fuehrend_overrides || {};
-    if(ov[evu.id]) lead = ov[evu.id];
-    return {text: lead, hint: `Basis: ${variant.fuehrend === 'MEV' ? 'MEV führend' : 'EVU führend'} · EVU: ${evu.id}`};
-  }
-
-  function applyAutoDecisions(){
-  const evKey = (evKeyEl.value||'').trim();
-  const varKey = (varKeyEl.value||'').trim();
-  const found = findVariant(evKey, varKey);
-
-  if(!found){
-    // NEU: Vorgehen leeren, damit im UI nichts „hängen bleibt“
-    renderVorgehen(null);
-
-    sourceView.textContent = 'Keine gültige Kombination Ereignisart/Variante.';
-    renderFlags({EL:false,RB:false,FS:false,EK:false});
-    fuehrendView.textContent = '—';
-    fuehrendHint.textContent = 'Wähle Ereignisart und Variante, dann wird Führend gesetzt.';
-    return;
-  }
-
-  const v = found.variant;
-  const flags = v.flags || {};
-  renderFlags(flags);
-
-  sourceView.textContent = `Entscheidungsbaum: ${found.event.etype} (${found.event.key}) → ${v.text} (${v.key})`;
-
-  const lead = computeFuehrend(v);
-  fuehrendView.textContent = lead.text;
-  fuehrendHint.textContent = lead.hint;
-
-  // NEU: Vorgehen anzeigen (massnahmen_global + massnahmen_evu)
-  renderVorgehen(v);
-}
-
-  function renderEvents(){
-    evWrap.innerHTML = '';
-    if(!events.length){
-      evWrap.innerHTML = '<div class="pillar locked" style="cursor:default;background:#f0f0f0;border:1px dashed #bbb;">Keine Ereignisse gefunden</div>';
-      return;
-    }
-    for(const e of events){
-      const p = document.createElement('div');
-      p.className = 'pillar';
-      p.textContent = e.etype;
-      p.setAttribute('data-evkey', e.key);
-      p.onclick = ()=> selectEvent(e.key);
-      evWrap.appendChild(p);
-    }
-  }
-
-  function renderVarianten(list){
-    varWrap.innerHTML = '';
-    for(const v of (list||[])){
-      const p = document.createElement('div');
-      p.className = 'pillar';
-      p.textContent = v.text;
-      p.setAttribute('data-varkey', v.key);
-      p.onclick = ()=> selectVariante(v.key);
-      varWrap.appendChild(p);
-    }
-  }
-
-  function selectEvent(key){
-    selectedEvent = events.find(x=> x.key===key) || null;
-    [...evWrap.querySelectorAll('.pillar')].forEach(p=> p.classList.toggle('active', p.getAttribute('data-evkey') === key));
-
-    varKeyEl.value = '';
-    varWrap.innerHTML = '';
-    varSection.classList.add('is-hidden');
-
-    if(!selectedEvent){
-      evKeyEl.value = '';
-      renderVorgehen(null);
-      if(!overrideToggle.checked) applyAutoDecisions();
-      return;
-    }
-
-    evKeyEl.value = selectedEvent.key;
-    renderVarianten(selectedEvent.varianten);
-    varSection.classList.remove('is-hidden');
-    renderVorgehen(null);
-    if(!overrideToggle.checked) applyAutoDecisions();
-  }
-
-  function selectVariante(varKey){
-  [...varWrap.querySelectorAll('.pillar')].forEach(p=> p.classList.toggle('active', p.getAttribute('data-varkey') === varKey));
-  varKeyEl.value = varKey;
-
-  // NEU: Vorgehen anzeigen – unabhängig vom Override
-  const found = findVariant((evKeyEl.value||'').trim(), (varKeyEl.value||'').trim());
-  renderVorgehen(found ? found.variant : null);
-
-  if(!overrideToggle.checked) applyAutoDecisions();
-}
-
-  overrideToggle.addEventListener('change', ()=>{
-    setManualMode(overrideToggle.checked);
-    if(!overrideToggle.checked) applyAutoDecisions();
-  });
-
-  evuSelect.addEventListener('change', ()=> applyAutoDecisions());
-
-  // Load Decision Tree
-  try{
-    const res = await fetch(URL_TREE);
-    TREE = await res.json();
-
-    events = (TREE.ereignisse || []).map(e => ({
-      etype: e.etype || '',
-      key: e.key || '',
-      varianten: (e.varianten || []).map(v => ({ key: v.key || '', text: v.text || '' })),
-    })).filter(e => e.etype && e.key);
-
-    renderEvents();
-
-    evuSelect.innerHTML = '';
-    (TREE.evu || []).forEach(x=>{
-      evuSelect.appendChild(new Option(`${x.label} (${x.id})`, x.id));
-    });
-    evuSelect.value = (TREE.default && TREE.default.evu) ? TREE.default.evu : 'MEV';
-  }catch(err){
-    console.warn(err);
-    evWrap.innerHTML = '<div class="pillar locked" style="cursor:default;background:#fff1f1;border:2px dashed #e53935;color:#b00020;">Fehler: assets/entscheidungsbaum.json konnte nicht geladen werden.</div>';
-  }
-
-  // Rufbereitschaft + Telefon ergänzen (Join via Mail)
-  try{
-    const res = await fetch(URL_RB);
-    const RBPLAN = await res.json();
-
-    const nowD = new Date();
-    const entries = (RBPLAN || [])
-      .filter(x => ((x.gruppe||'').toLowerCase().includes('notfallmanagement')))
-      .map(x => ({...x, startD: new Date(x.start), endeD: new Date(x.ende)}))
-      .filter(x => nowD >= x.startD && nowD < x.endeD);
-
-    if(entries.length){
-      const cur = entries[0];
-      rbName.textContent = cur.mitarbeiter || '—';
-      rbMail.textContent = cur.mail || '—';
-
-      const m = (cur.mail||'').toLowerCase();
-      const staffHit = staffByMail.get(m);
-      rbTel.textContent = staffHit?.tel || '—';
-
-      rbZeit.textContent = `${fmtDate(cur.startD)} – ${fmtDate(cur.endeD)}`;
-      setCardActive(rbCard, true);
-      rbHint.textContent = `Quelle: rufbereitschaft_plan.json (${cur.gruppe})`;
-    } else {
-      rbName.textContent='—'; rbMail.textContent='—'; rbTel.textContent='—'; rbZeit.textContent='—';
-      setCardActive(rbCard, false);
-      rbHint.textContent = 'Keine aktuelle Rufbereitschaft gefunden (Datum/Gruppe prüfen).';
-    }
-  }catch(err){
-    console.warn(err);
-    rbHint.textContent = 'Fehler: assets/rufbereitschaft_plan.json konnte nicht geladen werden.';
-  }
-
-  // Stations + Map laden
-  try{ await loadStations(); }catch(e){ console.warn(e); }
-  try{ await loadMap(); }catch(e){
-    console.warn(e);
-    mapStatus.textContent = 'map.svg: Fehler beim Laden';
-    mapBox.classList.remove('loading');
-    mapBox.innerHTML = '<div style="padding:12px;font-weight:900;color:#b00020;">Fehler: assets/map.svg konnte nicht geladen werden.</div>';
-  }
-
-
-
-  function prefillFromDienstuebergabe(){
-    if(urlParams.get('quelle') !== 'dienstuebergabe') return;
-
-    const vorgangId = urlParams.get('vorgangId') || '';
-    const mitarbeiter = urlParams.get('mitarbeiter') || '';
-    const mitarbeiterMail = urlParams.get('mitarbeiterMail') || '';
-    const dienst = urlParams.get('dienst') || '';
-    const datum = urlParams.get('datum') || '';
-    const zug = urlParams.get('zug') || '';
-    const ort = urlParams.get('ort') || '';
-    const bemerkung = urlParams.get('bemerkung') || '';
-    const evu = urlParams.get('evu') || '';
-
-    if(datum) setFieldValue('meldung_datum', datum);
-    if(zug){
-      clickPillar('#zugfahrzeugPillars .pillar[data-mode="zug"]');
-      setFieldValue('zugfahrzeugInput', zug);
-    }
-    if(evu && evuSelect){
-      evuSelect.value = evu;
-      evuSelect.dispatchEvent(new Event('change', {bubbles:true}));
-    }
-
-    if(mitarbeiter || mitarbeiterMail){
-      const rolePill = document.querySelector('#invRoles .pillar[data-role="lokfuehrer"]');
-      if(rolePill && !rolePill.classList.contains('active')) rolePill.click();
-      const p = findStaffFromPrefill(mitarbeiter, mitarbeiterMail);
-      addInvPerson('lokfuehrer');
-      const list = document.getElementById('invList_lokfuehrer');
-      const personEl = list?.lastElementChild;
-      if(personEl && p){
-        const sel = personEl.querySelector('.inv-intern-select');
-        if(sel) setSelectToStaff(sel, p);
-      } else if(personEl){
-        const parts = mitarbeiter.trim().split(/\s+/).filter(Boolean);
-        const vor = personEl.querySelector('.inv_vor_in');
-        const nach = personEl.querySelector('.inv_nach_in');
-        const mail = personEl.querySelector('.inv_mail_in');
-        if(parts.length > 1){
-          if(vor) vor.value = parts.slice(0,-1).join(' ');
-          if(nach) nach.value = parts.slice(-1).join(' ');
-        } else if(nach){
-          nach.value = mitarbeiter;
-        }
-        if(mail && mitarbeiterMail) mail.value = mitarbeiterMail;
-        (vor || nach || mail)?.dispatchEvent(new Event('input', {bubbles:true}));
+      const prev = activeStatus();
+      [...statusPillars.querySelectorAll('.pillar')].forEach(x=>x.classList.toggle('active', x===p));
+      const next = activeStatus();
+      if(prev !== next){
+        addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus(next)}`, '', 'info');
       }
-    }
-
-    const lines = [
-      vorgangId ? `Vorgang Dienstübergabe: ${vorgangId}` : '',
-      dienst ? `Dienst: ${dienst}` : '',
-      ort ? `Ort/Relation aus Dienstübergabe: ${ort}` : '',
-      bemerkung ? `Kurzbeschreibung: ${bemerkung}` : ''
-    ].filter(Boolean);
-    if(lines.length) setFieldValue('ereignis_bemerkungen', lines.join('\n'));
-
-    setSaveStatus('aus Dienstübergabe vorbefüllt', 'warn');
-  }
-
-  // Init Entscheidungen
-  setManualMode(false);
-  renderInitialHiddenEvaluation();
-  prefillFromDienstuebergabe();
-  applyAutoDecisions();
-
-  // Fotos preview
-  const photoInput = document.getElementById('photoInput');
-  const photoPreview = document.getElementById('photoPreview');
-  function renderPhotos(files){
-    photoPreview.innerHTML='';
-    const list = Array.from(files||[]);
-    list.slice(0, 4).forEach(f=>{
-      const box = document.createElement('div');
-      box.className='photo-thumb';
-      const img = document.createElement('img');
-      box.appendChild(img);
-      photoPreview.appendChild(box);
-      const url = URL.createObjectURL(f);
-      img.src = url;
-      img.onload = ()=> URL.revokeObjectURL(url);
+      // Wenn Nachfassen aktiv, erzwinge beim Kunden (ausser abgeschlossen)
+      updateFollowupUi();
+      renderPreview();
     });
-  }
-  photoInput.addEventListener('change', ()=> renderPhotos(photoInput.files));
 
-  // Export JSON
-  function collectFormData(){
+    // Contacts chips
+    contactChips.addEventListener('click', (e)=>{
+      const c = e.target.closest('.chip2');
+      if(!c) return;
+      const was = c.classList.contains('done');
+      c.classList.toggle('done');
+      if(!was){
+        addTimeline('kontakt', `Kontakt: ${c.textContent.trim()}`, 'kontaktiert / informiert', 'done');
+      } else {
+        addTimeline('kontakt', `Kontakt entfernt: ${c.textContent.trim()}`, 'Markierung zurückgenommen', 'warn');
+      }
+      // Wenn Kunde kontaktiert (Chip) aktiv, kann Nachfassen optional als erledigt betrachtet werden – wir lassen es bewusst offen.
+      renderPreview();
+    });
 
-  // --- Helfer ---
-  const val = (id) => (document.getElementById(id)?.value || '').trim();
-  const any = (...ids) => ids.some(id => val(id).length > 0);
-
-  const pickFromSelect = (selectEl) => {
-    if(!selectEl || !selectEl.value) return null;
-    const opt = selectEl.selectedOptions?.[0];
-    if(!opt) return null;
-    return {
-      mev_id: selectEl.value,
-      vorname: opt.dataset.vorname || '',
-      nachname: opt.dataset.nachname || '',
-      mail: opt.dataset.mail || '',
-      tel: opt.dataset.tel || ''
-    };
-  };
-
-  const stationMini = (s) => s ? {
-    code: (s.code || '').toString().trim(),
-    label: (s.label || '').toString().trim(),
-    id: (s.id || '').toString().trim()
-  } : null;
-
-  // --- Melder ---
-  const melderIntern = pickFromSelect(document.getElementById('melderInternSelect'));
-  const melderExtern = any('melderExternFirma','melderExternVor','melderExternNach','melderExternMail','melderExternTel') ? {
-    unternehmen: val('melderExternFirma'),
-    vorname: val('melderExternVor'),
-    nachname: val('melderExternNach'),
-    mail: val('melderExternMail'),
-    tel: val('melderExternTel')
-  } : null;
-
-  const melder = melderIntern ? { typ:'Intern', ...melderIntern }
-              : melderExtern ? { typ:'Extern', ...melderExtern }
-              : null;
-
-  // --- Erfasser ---
-  const erfasserPick = pickFromSelect(document.getElementById('erfasserSelect'));
-  const erfasser = erfasserPick ? { typ:'Intern', ...erfasserPick } : null;
-
-  // --- Involvierte ---
-  const involvierte = [];
-  document.querySelectorAll('.inv-person').forEach(person => {
-    const roleKey = person.dataset.role || '';
-    const roleText = (typeof roleLabel === 'function') ? roleLabel(roleKey) : roleKey;
-
-    const sel = person.querySelector('.inv-intern-select');
-    const intern = pickFromSelect(sel);
-
-    const firma = (person.querySelector('.inv_firma')?.value || '').trim();
-    const vor   = (person.querySelector('.inv_vor_in')?.value || '').trim();
-    const nach  = (person.querySelector('.inv_nach_in')?.value || '').trim();
-    const mail  = (person.querySelector('.inv_mail_in')?.value || '').trim();
-    const tel   = (person.querySelector('.inv_tel_in')?.value || '').trim();
-    const externAny = !!(firma || vor || nach || mail || tel);
-
-    if(intern){
-      involvierte.push({
-        rolle: roleText,
-        typ: 'Intern',
-        ...intern
-      });
-    } else if(externAny){
-      involvierte.push({
-        rolle: roleText,
-        typ: 'Extern',
-        unternehmen: firma,
-        vorname: vor,
-        nachname: nach,
-        mail: mail,
-        tel: tel
+    // Massnahmen chips
+    function renderRecChips(){
+      recChips.innerHTML = '';
+      state.recommended.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'chip' + (m.status==='umgesetzt' ? ' done' : m.status==='blockiert' ? ' blocked' : '');
+        div.dataset.key = m.key;
+        div.textContent = m.label;
+        recChips.appendChild(div);
       });
     }
-  });
 
-  // --- Ereignisart / Variante Text ---
-  const ev_key = (evKeyEl.value || '').trim();
-  const var_key = (varKeyEl.value || '').trim();
-
-  const evObj = (TREE?.ereignisse || []).find(e => e.key === ev_key) || null;
-  const varObj = evObj ? (evObj.varianten || []).find(v => v.key === var_key) : null;
-
-  // --- Ort ---
-  const ortMode = document.querySelector('#ortPillars .pillar.active')?.dataset.ort || '';
-  const ort = {
-    modus: ortMode,
-    bahnhof: stationMini(ortSelection?.bahnhof),
-    zugziel: stationMini(ortSelection?.zugziel),
-    start: stationMini(ortSelection?.start),
-    ziel: stationMini(ortSelection?.ziel),
-    anschluss: stationMini(ortSelection?.anschluss),
-    anschlussText: val('anschlussText')
-  };
-
-  // --- Flags ---
-  const flags = {};
-  ['EL','RB','FS','EK'].forEach(k=>{
-    const p = flagsWrap.querySelector(`.pillar[data-flag="${k}"]`);
-    flags[k] = !!(p && p.classList.contains('active'));
-  });
-
-  // --- Massnahme Status ---
-  const massnahmen_empfohlen = massnahmenEmpfohlen;
-
-  // --- Fotos (nur Metadaten, keine Bytes) ---
-  const fotos = Array.from(document.getElementById('photoInput')?.files || []).map(f => ({
-    name: f.name, size: f.size, type: f.type
-  }));
-
-  // --- Ergebnisobjekt ---
-  const data = {
-    meta: {
-      ereignisId: getOrCreateEreignisId(),
-      title: `${evObj?.etype || 'Ereignis'}${varObj?.text ? ' – ' + varObj.text : ''}`.trim(),
-      erzeugtAm: new Date().toISOString(),
-      letzteAenderung: new Date().toISOString(),
-      schema: 'mev-ereignis-v1',
-      quelle: urlParams.get('quelle') || 'ereignis_app',
-      vorgangIdDienstuebergabe: urlParams.get('vorgangId') || ''
-    },
-
-    // geheimer Trigger für den Flow:
-    "EREIGNIS-MEV": true,
-
-    alarmierung: {
-      meldungDatum: meldD.value,
-      meldungUhrzeit: meldT.value,
-      meldung_datum: meldD.value,
-      meldung_uhrzeit: meldT.value,
-      melder,
-      erfasser: {
-        systemDatum: document.getElementById('erfasser_sys_datum')?.textContent || '',
-        systemUhrzeit: document.getElementById('erfasser_sys_uhrzeit')?.textContent || '',
-        auswahl: erfasser
-      },
-      involvierte,
-      bemerkungen: (document.getElementById('alarm_bemerkungen').value||'').trim()
-    },
-
-    ereignis: {
-      ev_key,
-      ev_text: evObj?.etype || '',
-      ereignisart: evObj?.etype || '',
-      var_key,
-      var_text: varObj?.text || '',
-      variante: varObj?.text || '',
-      zugfahrzeug: {
-        modus: zugMode,
-        nummer: (document.getElementById('zugfahrzeugInput').value||'').trim()
-      },
-      ort,
-      bemerkungen: (document.getElementById('ereignis_bemerkungen').value||'').trim()
-    },
-
-    entscheidungen: {
-      evu: evuSelect.value || (TREE?.default?.evu || 'MEV'),
-      verantwortliches_unternehmen: (fuehrendView.textContent||'').trim(),
-      flags,
-      override: !!overrideToggle.checked,
-      rufbereitschaft: {
-        name: rbName.textContent,
-        mail: rbMail.textContent,
-        tel: rbTel.textContent,
-        zeitraum: rbZeit.textContent
-      },
-      massnahmen_empfohlen: massnahmen_empfohlen,
-      massnahmen_text: (document.getElementById('massnahmen_text').value||'').trim(),
-      bemerkungen: (document.getElementById('entscheid_bemerkungen').value||'').trim()
-    },
-
-    fotos
-  };
-
-  return data;
-}
-
-
-
-  async function saveToSharePoint(payload){
-    if(!FLOW_ENABLED){
-      throw new Error('SAVE_FLOW_URL ist noch nicht gesetzt. Bitte Flow-HTTP-URL in index_ereignisse.html einfügen.');
-    }
-    const ereignisId = payload?.meta?.ereignisId || getOrCreateEreignisId();
-    payload.meta = payload.meta || {};
-    payload.meta.ereignisId = ereignisId;
-    payload.meta.letzteAenderung = new Date().toISOString();
-
-    const res = await fetch(SAVE_FLOW_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        action: 'upsert',
-        ereignisId,
-        payload
-      })
+    recChips.addEventListener('click', (e)=>{
+      const c = e.target.closest('.chip');
+      if(!c) return;
+      const key = c.dataset.key;
+      const m = state.recommended.find(x=>x.key===key);
+      if(!m) return;
+      const prev = m.status;
+      m.status = (m.status==='offen') ? 'umgesetzt' : (m.status==='umgesetzt') ? 'blockiert' : 'offen';
+      renderRecChips();
+      if(prev !== m.status){
+        const cls = m.status==='umgesetzt' ? 'done' : (m.status==='blockiert' ? 'warn' : 'info');
+        addTimeline('massnahme', `Massnahme ${m.key}: ${prev} → ${m.status}`, m.label, cls);
+        if(m.key==='KUN' && m.status==='umgesetzt') addTimeline('kunde', 'Kunde informiert', 'aus Massnahme KUN', 'done');
+        if(m.key==='ROS' && m.status==='umgesetzt') addTimeline('rail', 'Railopsperre erledigt', 'aus Massnahme ROS', 'done');
+      }
+      renderPreview();
     });
-    const text = await res.text();
-    let json = null;
-    try{ json = text ? JSON.parse(text) : null; }catch(_){ json = {raw:text}; }
-    if(!res.ok){
-      throw new Error(`SharePoint-Speicherung fehlgeschlagen: HTTP ${res.status} ${text}`);
+
+    // Follow-up input listeners
+    [followLast, followNext, followNote].forEach(el=>{
+      el.addEventListener('input', ()=>{ updateFollowupUi(); renderPreview(); });
+      el.addEventListener('change', ()=>{ updateFollowupUi(); renderPreview(); });
+    });
+
+    // Collect UI
+    function collectUI(){
+      const rec = state.recommended.map(x=>({key:x.key,label:x.label,status:x.status}));
+      const contacts = [...contactChips.querySelectorAll('.chip2')].map(c=>({
+        key: c.dataset.key,
+        label: c.textContent.trim(),
+        kontaktiert: c.classList.contains('done')
+      }));
+
+      return {
+        incidentId: document.getElementById('incidentId').value.trim(),
+        actor: state.actor,
+        status: activeStatus(),
+        statusText: document.getElementById('statusText').value.trim(),
+        ort: {
+          modus: document.getElementById('ortModus').value,
+          start: document.getElementById('ortStart').value.trim(),
+          ziel: document.getElementById('ortZiel').value.trim(),
+        },
+        zeiten: {
+          kundeKontaktiert: document.getElementById('tsKunde').value,
+          ausruecken: document.getElementById('tsAus').value,
+          eintreffen: document.getElementById('tsEin').value,
+        },
+        kontakte: {
+          standard: contacts,
+          frei: {
+            name: document.getElementById('freeContactName').value.trim(),
+            tel: document.getElementById('freeContactTel').value.trim(),
+            org: document.getElementById('freeContactOrg').value.trim(),
+            note: document.getElementById('freeContactNote').value.trim(),
+          }
+        },
+        massnahmen: {
+          empfohlen: rec,
+          umgesetztNotiz: document.getElementById('doneNotes').value.trim(),
+        },
+        handover: {
+          to: document.getElementById('handoverTo').value.trim(),
+          at: document.getElementById('handoverAt').value,
+          reason: document.getElementById('handoverReason').value.trim(),
+        },
+        leitstelle: document.getElementById('leitstelle').value.trim(),
+        ansprechpartner: {
+          name: document.getElementById('apName').value.trim(),
+          tel: document.getElementById('apTel').value.trim(),
+          firma: document.getElementById('apFirma').value.trim(),
+          notes: document.getElementById('apNotes').value.trim(),
+        },
+        followup: {
+          active: followupActive(),
+          last: followLast.value,
+          next: followNext.value,
+          note: followNote.value.trim(),
+          ampelfarbe: followLamp.classList.contains('red') ? 'rot' : followLamp.classList.contains('yellow') ? 'gelb' : 'gruen'
+        },
+        timeline: state.timeline,
+        meta: { erzeugtAm: new Date().toISOString(), client: 'workflow_mockup_el_rb_v4' }
+      };
     }
-    return json || {ok:true};
-  }
 
-  function downloadJson(obj){
-    const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
-    const a = document.createElement('a');
-    const ts = new Date();
-    const name = `meldung_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}.json`;
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  }
+    function renderPreview(){
+      payloadPreview.value = JSON.stringify(collectUI(), null, 2);
+    }
 
-  document.getElementById('btnSubmit').addEventListener('click', async ()=>{
-  if(!meldD.checkValidity() || !meldT.checkValidity()){
-    alert('Bitte Meldung Datum und Meldung Uhrzeit ausfüllen.');
-    return;
-  }
-  const data = collectFormData();
-  try{
-    setSaveStatus('speichert …', 'run');
-    const result = await saveToSharePoint(data);
-    setSaveStatus(`gespeichert: ${data.meta.ereignisId}`, 'ok');
-    alert(`Ereignis gespeichert: ${data.meta.ereignisId}`);
-    console.log('SharePoint result', result);
-  }catch(err){
-    console.error(err);
-    setSaveStatus('Fehler – JSON exportiert', 'err');
-    alert('Speichern in SharePoint fehlgeschlagen. JSON wird lokal exportiert.\n\n' + (err?.message || err));
-    downloadJson(data);
-  }
-});
+    // Buttons
+    document.getElementById('btnSave').addEventListener('click', ()=>{
+      // Log key timestamp fields if set
+      const tsK = document.getElementById('tsKunde').value;
+      const tsA = document.getElementById('tsAus').value;
+      const tsE = document.getElementById('tsEin').value;
+      if(tsK) addTimeline('zeit', 'Zeit: Kunde kontaktiert', tsK, 'done');
+      if(tsA) addTimeline('zeit', 'Zeit: Ausrücken', tsA, 'done');
+      if(tsE) addTimeline('zeit', 'Zeit: Eintreffen', tsE, 'done');
 
-  document.getElementById('btnExportJson')?.addEventListener('click', ()=>{
-    downloadJson(collectFormData());
-  });
+      // Free contact
+      const fcN = document.getElementById('freeContactName').value.trim();
+      const fcT = document.getElementById('freeContactTel').value.trim();
+      const fcO = document.getElementById('freeContactOrg').value.trim();
+      const fcNote = document.getElementById('freeContactNote').value.trim();
+      if(fcN || fcT || fcO || fcNote){
+        addTimeline('kontakt', 'Kontaktperson erfasst', `${fcN || '—'} · ${fcO || '—'} · ${fcT || '—'} · ${fcNote}`, 'done');
+      }
 
-  document.getElementById('btnReset').addEventListener('click', ()=>{
-    if(!confirm('Formular wirklich zurücksetzen?')) return;
-    location.reload();
-  });
+      // Handover
+      const hoTo = document.getElementById('handoverTo').value.trim();
+      const hoAt = document.getElementById('handoverAt').value;
+      const hoReason = document.getElementById('handoverReason').value.trim();
+      if(hoTo || hoAt || hoReason){
+        addTimeline('handover', 'Fall übergeben / Eskalation', `${hoTo || '—'} · ${hoAt || '—'} · ${hoReason || ''}`.trim(), 'info');
+      }
 
-})();
-</script>
+      // Follow-up log (if active)
+      if(followupActive()){
+        addTimeline('follow', 'Nachfassen aktualisiert', `${followLast.value || '—'} → ${followNext.value || '—'} · ${followNote.value.trim() || ''}`.trim(), followLamp.classList.contains('red') ? 'warn' : 'info');
+      }
+
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: würde jetzt UpdateIncident-Flow aufrufen (HTTP POST) · ' + nowTime();
+      alert('Demo: Speichern würde jetzt den Vorfall in SharePoint aktualisieren.');
+    });
+
+    document.getElementById('btnLoad').addEventListener('click', ()=>{
+      addTimeline('load', 'Vorfall geladen', 'Demo: Daten würden aus SharePoint kommen', 'info');
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: würde jetzt GetIncident-Flow aufrufen · ' + nowTime();
+      alert('Demo: Laden würde jetzt Daten aus SharePoint holen und das Formular befüllen.');
+    });
+
+    document.getElementById('btnClose').addEventListener('click', ()=>{
+      const prev = activeStatus();
+      setStatus('abgeschlossen', true);
+      addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus('abgeschlossen')}`, 'Abschluss ausgelöst', 'done');
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: Abschluss würde jetzt Status=Abgeschlossen setzen · ' + nowTime();
+      alert('Demo: Abschliessen würde jetzt den Vorfall abschliessen (Status/Metadaten)');
+    });
+
+    // Init baseline
+    function initBaseline(){
+      state.timeline = [
+        {t:new Date(Date.now()-45*60*1000).toISOString(), actor:'EL', cls:'done', kind:'create', text:'Meldung erfasst (Einsatzleitung)', sub:'ZGO → OL · Fotos: 2'},
+        {t:new Date(Date.now()-37*60*1000).toISOString(), actor:'EL', cls:'done', kind:'kontakt', text:'Kunde kontaktiert', sub:'Telefon / Mail (Demo)'},
+        {t:new Date(Date.now()-32*60*1000).toISOString(), actor:'EL', cls:'done', kind:'kontakt', text:'RB informiert', sub:'Übernahme bestätigt'},
+        {t:new Date(Date.now()-20*60*1000).toISOString(), actor:'RB', cls:'info', kind:'status', text:'Status: In Bearbeitung', sub:'Erste Abklärungen laufen'}
+      ];
+    }
+
+    // Fix for accidental True in JS from python generation
+  </script>
+  <script>
+    // --- kleine Korrektur: setStatus('abgeschlossen', true) beim Abschliessen ---
+    // (zweites Script, damit die HTML robust bleibt)
+    // Init
+    initBaseline();
+    renderRecChips();
+    renderTimeline();
+    setFollowupDefault();
+    updateFollowupUi();
+    renderPreview();
+
+    // Patch: override btnClose handler with correct boolean
+    document.getElementById('btnClose').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const prev = activeStatus();
+      setStatus('abgeschlossen', true);
+      addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus('abgeschlossen')}`, 'Abschluss ausgelöst', 'done');
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: Abschluss würde jetzt Status=Abgeschlossen setzen · ' + nowTime();
+      alert('Demo: Abschliessen würde jetzt den Vorfall abschliessen (Status/Metadaten)');
+    }, {once:true});
+  </script>
+
+
+  <script>
+    /* =========================================================
+       SharePoint-/Power-Automate-Anbindung
+       - SAVE_FLOW_URL: bestehender Upsert-Flow Ereignisliste neu
+       - LOAD_FLOW_URL: optionaler Abruf-Flow, sobald vorhanden
+       - Entfernt Demo-Buttonhandler durch Button-Klonen und ersetzt sie
+    ========================================================= */
+    (() => {
+      const SAVE_FLOW_URL = 'https://defaulte3d2e8defe3548eaa78972c4a2acf9.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7659dd88f4f440319ce452a19d40a2bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JbYc2mpIVfIuF5mQmKcZalNY8N2tDSyf2xqbgcvKeCM';
+      const LOAD_FLOW_URL = 'https://defaulte3d2e8defe3548eaa78972c4a2acf9.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9705f2ddfe9844a890b27132e0f9978f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5iKFry3jecsa9poNjLJ2V2ob4EdCnzGE-E6MmdGNTUM';
+      const MAP_URL = 'assets/map.svg';
+      const SAVE_ENABLED = SAVE_FLOW_URL && !SAVE_FLOW_URL.includes('HIER_DEINE_SAVE_FLOW_HTTP_URL');
+      const LOAD_ENABLED = LOAD_FLOW_URL && !LOAD_FLOW_URL.includes('HIER_DEINE_LOAD_FLOW_HTTP_URL');
+
+      const pad2 = (n)=> String(n).padStart(2,'0');
+      const isoLocalNow = ()=>{
+        const d = new Date();
+        return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      };
+
+      function postJson(url, body){
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }).then(async res => {
+          const txt = await res.text();
+          let json = null;
+          try{ json = txt ? JSON.parse(txt) : null; }catch(_){ json = null; }
+          if(!res.ok){
+            throw new Error(`HTTP ${res.status} ${txt || res.statusText}`);
+          }
+          return json || { ok:true, raw:txt };
+        });
+      }
+
+      function makeId(){
+        const d = new Date();
+        return `EVT-WF-${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+      }
+
+      function getQuery(){
+        return new URLSearchParams(window.location.search || '');
+      }
+
+      function ensureIncidentId(){
+        const el = document.getElementById('incidentId');
+        const q = getQuery();
+        const fromUrl = q.get('ereignisId') || q.get('incidentId') || q.get('id');
+        if(el && fromUrl && (!el.value || el.value === 'INC-2026-000123')) el.value = fromUrl;
+        if(el && !el.value.trim()) el.value = makeId();
+        return (el?.value || makeId()).trim();
+      }
+
+      function downloadWorkflowJson(obj){
+        const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
+        const a = document.createElement('a');
+        const id = ensureIncidentId().replace(/[^a-zA-Z0-9_-]+/g,'_');
+        a.href = URL.createObjectURL(blob);
+        a.download = `workflow_${id}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+      }
+
+      function buildWorkflowPayload(){
+        const id = ensureIncidentId();
+        const payload = collectUI();
+        payload.incidentId = id;
+        payload.meta = {
+          ...(payload.meta || {}),
+          schema: 'mev-workflow-el-rb-v1',
+          quelle: 'workflow_el_rb',
+          ereignisId: id,
+          letzteAenderung: new Date().toISOString(),
+          client: 'workflow_mockup_el_rb_v4_sharepoint'
+        };
+        return payload;
+      }
+
+      function setVal(id, value){
+        const el = document.getElementById(id);
+        if(!el || value == null) return;
+        el.value = String(value);
+        el.dispatchEvent(new Event('input', { bubbles:true }));
+        el.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+
+      function stationText(st){
+        if(!st) return '';
+        if(typeof st === 'string') return st;
+        const code = st.code || '';
+        const label = st.label || st.name || '';
+        return code && label ? `${code} – ${label}` : (label || code || '');
+      }
+
+      function applyStatus(status){
+        if(!status) return;
+        if(typeof setStatus === 'function') setStatus(status, true);
+      }
+
+      function setContactChips(contacts){
+        if(!Array.isArray(contacts)) return;
+        const byKey = new Map(contacts.map(c => [c.key, !!c.kontaktiert]));
+        document.querySelectorAll('#contactChips .chip2').forEach(chip => {
+          if(byKey.has(chip.dataset.key)) chip.classList.toggle('done', byKey.get(chip.dataset.key));
+        });
+      }
+
+      function setRecommended(listOrObject){
+        if(Array.isArray(listOrObject)){
+          state.recommended = listOrObject.map(x => ({
+            key: x.key || x.code || x.label || 'MASS',
+            label: x.label || x.text || x.key || 'Massnahme',
+            status: x.status || 'offen'
+          }));
+          renderRecChips();
+          return;
+        }
+        if(listOrObject && typeof listOrObject === 'object'){
+          const keys = Object.keys(listOrObject).filter(k => listOrObject[k] === true || listOrObject[k]);
+          if(keys.length){
+            state.recommended = keys.map(k => ({ key:k, label:`${k} – empfohlen`, status:'offen' }));
+            renderRecChips();
+          }
+        }
+      }
+
+      function extractPayloadFromResponse(data){
+        let raw = data?.payload || data?.item?.payload || data?.PayloadJson || data?.payloadJson;
+        if(!raw && Array.isArray(data?.items) && data.items.length){
+          raw = data.items[0].payload || data.items[0].payloadJson || data.items[0].PayloadJson;
+        }
+        if(!raw && data?.item) raw = data.item;
+        if(typeof raw === 'string'){
+          try{ return JSON.parse(raw); }catch(_){ return null; }
+        }
+        if(raw && typeof raw === 'object') return raw;
+        return null;
+      }
+
+      function applyWorkflowPayload(payload){
+        if(!payload || typeof payload !== 'object'){
+          alert('Keine gültigen Ereignisdaten gefunden.');
+          return;
+        }
+
+        // Fall A: Payload aus dieser Workflow-App
+        setVal('incidentId', payload.incidentId || payload.meta?.ereignisId || payload.ereignisId || '');
+        setVal('ereignis', payload.ereignis || payload.ereignisText || payload.ereignis?.ev_text || payload.ereignis?.evText || '');
+        if(payload.status) applyStatus(payload.status);
+        setVal('statusText', payload.statusText || '');
+        if(payload.ort){
+          setVal('ortModus', payload.ort.modus || '');
+          setVal('ortStart', payload.ort.start || stationText(payload.ort.bahnhof) || stationText(payload.ort.startStation));
+          setVal('ortZiel', payload.ort.ziel || stationText(payload.ort.zielStation));
+        }
+        if(payload.zeiten){
+          setVal('tsKunde', payload.zeiten.kundeKontaktiert || '');
+          setVal('tsAus', payload.zeiten.ausruecken || '');
+          setVal('tsEin', payload.zeiten.eintreffen || '');
+        }
+        if(payload.kontakte){
+          setContactChips(payload.kontakte.standard);
+          setVal('freeContactName', payload.kontakte.frei?.name || '');
+          setVal('freeContactTel', payload.kontakte.frei?.tel || '');
+          setVal('freeContactOrg', payload.kontakte.frei?.org || '');
+          setVal('freeContactNote', payload.kontakte.frei?.note || '');
+        }
+        if(payload.massnahmen){
+          setRecommended(payload.massnahmen.empfohlen);
+          setVal('doneNotes', payload.massnahmen.umgesetztNotiz || '');
+        }
+        if(payload.handover){
+          setVal('handoverTo', payload.handover.to || '');
+          setVal('handoverAt', payload.handover.at || '');
+          setVal('handoverReason', payload.handover.reason || '');
+        }
+        setVal('leitstelle', payload.leitstelle || '');
+        if(payload.ansprechpartner){
+          setVal('apName', payload.ansprechpartner.name || '');
+          setVal('apTel', payload.ansprechpartner.tel || '');
+          setVal('apFirma', payload.ansprechpartner.firma || '');
+          setVal('apNotes', payload.ansprechpartner.notes || '');
+        }
+        if(payload.followup){
+          setVal('followLast', payload.followup.last || '');
+          setVal('followNext', payload.followup.next || '');
+          setVal('followNote', payload.followup.note || '');
+        }
+        if(Array.isArray(payload.timeline)){
+          state.timeline = payload.timeline;
+          renderTimeline();
+        }
+
+        // Fall B: Payload direkt aus Ereignismelde-App
+        if(payload.ereignis && (payload.ereignis.ev_text || payload.ereignis.var_text || payload.entscheidungen)){
+          setVal('incidentId', payload.meta?.ereignisId || payload.ereignisId || payload.incidentId || ensureIncidentId());
+          setVal('ereignis', [payload.ereignis.ev_text, payload.ereignis.var_text].filter(Boolean).join(' – '));
+          setVal('summary', payload.ereignis.bemerkungen || '');
+          const o = payload.ereignis.ort || {};
+          setVal('ortModus', o.modus || '');
+          if(o.modus === 'strecke'){
+            setVal('ortStart', stationText(o.start));
+            setVal('ortZiel', stationText(o.ziel));
+          }else if(o.modus === 'bahnhof'){
+            setVal('ortStart', stationText(o.bahnhof));
+            setVal('ortZiel', stationText(o.zugziel));
+          }else if(o.modus === 'anschluss'){
+            setVal('ortStart', stationText(o.anschluss));
+            setVal('ortZiel', o.anschlussText || '');
+          }
+          setRecommended(payload.entscheidungen?.massnahmen_empfohlen);
+          setVal('doneNotes', payload.entscheidungen?.massnahmen_text || '');
+          addTimeline('load', 'Ereignismeldung übernommen', payload.meta?.ereignisId || '', 'info');
+        }
+
+        updateFollowupUi();
+        renderPreview();
+        syncInfo.textContent = 'Geladen / übernommen · ' + nowTime();
+      }
+
+      async function saveWorkflow(){
+        const tsK = document.getElementById('tsKunde').value;
+        const tsA = document.getElementById('tsAus').value;
+        const tsE = document.getElementById('tsEin').value;
+        if(tsK) addTimeline('zeit', 'Zeit: Kunde kontaktiert', tsK, 'done');
+        if(tsA) addTimeline('zeit', 'Zeit: Ausrücken', tsA, 'done');
+        if(tsE) addTimeline('zeit', 'Zeit: Eintreffen', tsE, 'done');
+        updateFollowupUi();
+
+        const payload = buildWorkflowPayload();
+        renderPreview();
+
+        if(!SAVE_ENABLED){
+          downloadWorkflowJson(payload);
+          syncInfo.textContent = 'Kein SAVE_FLOW_URL gesetzt – JSON lokal exportiert · ' + nowTime();
+          alert('Keine Save-Flow-URL gesetzt. JSON wurde lokal exportiert.');
+          return;
+        }
+
+        try{
+          const res = await postJson(SAVE_FLOW_URL, {
+            action: 'upsert',
+            ereignisId: payload.incidentId,
+            payload
+          });
+          syncInfo.textContent = `SharePoint gespeichert · ${nowTime()} · ${JSON.stringify(res)}`;
+          alert('Workflow in SharePoint gespeichert / aktualisiert.');
+        }catch(err){
+          console.error(err);
+          downloadWorkflowJson(payload);
+          syncInfo.textContent = 'SharePoint-Speicherung fehlgeschlagen – JSON exportiert · ' + nowTime();
+          alert('SharePoint-Speicherung fehlgeschlagen. JSON wurde lokal exportiert.\n\n' + err.message);
+        }
+      }
+
+      async function loadWorkflow(){
+        const id = ensureIncidentId();
+        if(!LOAD_ENABLED){
+          const txt = prompt('Noch keine LOAD_FLOW_URL gesetzt. Du kannst testweise PayloadJson aus SharePoint hier einfügen:');
+          if(!txt) return;
+          try{ applyWorkflowPayload(JSON.parse(txt)); }
+          catch(err){ alert('PayloadJson konnte nicht gelesen werden: ' + err.message); }
+          return;
+        }
+        try{
+          const res = await postJson(LOAD_FLOW_URL, { action:'get', ereignisId:id, limit:1 });
+          const payload = extractPayloadFromResponse(res);
+          applyWorkflowPayload(payload);
+        }catch(err){
+          console.error(err);
+          alert('Laden aus SharePoint fehlgeschlagen:\n\n' + err.message);
+        }
+      }
+
+      async function closeWorkflow(){
+        const prev = activeStatus();
+        setStatus('abgeschlossen', true);
+        addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus('abgeschlossen')}`, 'Abschluss ausgelöst', 'done');
+        updateFollowupUi();
+        await saveWorkflow();
+      }
+
+
+      async function loadMapSvg(){
+        const box = document.getElementById('mapBox');
+        if(!box) return;
+        try{
+          const res = await fetch(MAP_URL, {cache:'no-store'});
+          if(!res.ok) throw new Error('HTTP ' + res.status);
+          const svg = await res.text();
+          box.innerHTML = svg;
+          const svgEl = box.querySelector('svg');
+          if(svgEl){
+            svgEl.setAttribute('preserveAspectRatio','xMidYMid meet');
+            svgEl.style.width = '100%';
+            svgEl.style.height = '100%';
+          }
+        }catch(err){
+          box.innerHTML = '<div class="txt">map.svg konnte nicht geladen werden.<br>Lege die Datei unter assets/map.svg ab.</div>';
+          console.warn('map.svg konnte nicht geladen werden:', err);
+        }
+      }
+
+      function replaceButton(id, handler){
+        const old = document.getElementById(id);
+        if(!old) return;
+        const clone = old.cloneNode(true);
+        old.parentNode.replaceChild(clone, old);
+        clone.addEventListener('click', handler);
+      }
+
+      replaceButton('btnSave', saveWorkflow);
+      replaceButton('btnLoad', loadWorkflow);
+      replaceButton('btnClose', closeWorkflow);
+
+      // URL-Prefill: ?ereignisId=... öffnet direkt mit dieser ID.
+      ensureIncidentId();
+      loadMapSvg();
+      renderPreview();
+    })();
+  </script>
+
 </body>
 </html>
