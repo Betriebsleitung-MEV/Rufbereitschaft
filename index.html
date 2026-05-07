@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ereignismanagement – Workflow (EL/RB)</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f5f5f5;padding:24px}
+    .app{max-width:1280px;margin:0 auto;background:#fff;padding:22px 24px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .topbar h1{font-size:18px;margin:0}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+    button{cursor:pointer}
+    .btn-primary{padding:10px 14px;background:#2e7d32;border:1px solid #2e7d32;color:#fff;border-radius:8px;font-weight:900}
+    .btn-secondary{padding:10px 14px;background:#eee;border:1px solid #ccc;border-radius:8px;font-weight:900}
+    .btn-danger{padding:10px 14px;background:#e53935;border:1px solid #e53935;color:#fff;border-radius:8px;font-weight:900}
+
+    .grid{display:grid;gap:14px}
+    .row-2{grid-template-columns:1.2fr .8fr}
+    .row-3{grid-template-columns:1fr 1fr 1fr}
+    @media (max-width: 1100px){.row-2,.row-3{grid-template-columns:1fr}}
+
+    .section-title{background:#e53935;color:#fff;font-weight:900;text-align:center;border-radius:8px;margin-top:16px}
+    .section-title div{padding:12px;font-size:18px}
+    .subhead{margin:14px 0 8px;font-weight:900}
+
+    .card{border-radius:10px;padding:12px;border:2px solid #cfcfcf;background:#f0f0f0}
+    .card.active{border-color:#6bc28a;background:#dff5e1}
+    .field{background:#f9f9f9;padding:12px;border-radius:10px}
+    input, textarea, select{width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;box-sizing:border-box;font-size:14px}
+    textarea{resize:vertical}
+    .hint{font-size:12px;color:#666;margin-top:6px}
+
+    .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff;border:1px solid rgba(0,0,0,.15);font-weight:900;font-size:12px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px}
+
+    /* Actor switch */
+    .actor{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .actor .pill{padding:10px 12px;border-radius:999px;border:2px solid #cfcfcf;background:#f0f0f0;font-weight:900;cursor:pointer;user-select:none}
+    .actor .pill.active{border-color:#6bc28a;background:#dff5e1}
+
+    /* Status Pillars */
+    .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .pillar{padding:14px;border-radius:12px;text-align:center;font-weight:900;background:#e0e0e0;cursor:pointer;user-select:none;position:relative}
+    .pillar.active{background:#dff5e1;border:2px solid #6bc28a}
+    .p-label{font-size:12px;font-weight:900;opacity:.7;margin-bottom:6px}
+    .p-value{font-size:14px;font-weight:900}
+    .pillar .mini{position:absolute;right:10px;top:10px}
+
+    /* Chips */
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{border-radius:999px;padding:8px 10px;background:#eef2ff;border:1px solid #cfd8ff;font-weight:900;font-size:12px;cursor:pointer;user-select:none}
+    .chip.done{background:#dff5e1;border-color:#6bc28a}
+    .chip.blocked{background:#fff1f1;border-color:#e53935}
+
+    .chip2{border-radius:999px;padding:8px 10px;background:#eee;border:1px solid #ccc;font-weight:900;font-size:12px;cursor:pointer;user-select:none}
+    .chip2.done{background:#dff5e1;border-color:#6bc28a}
+
+    /* Timeline */
+    .timeline{border-left:3px solid #ddd;margin:8px 0 0 6px;padding-left:14px;display:flex;flex-direction:column;gap:10px}
+    .t-item{position:relative}
+    .t-item::before{content:'';position:absolute;left:-23px;top:3px;width:12px;height:12px;border-radius:999px;background:#bbb}
+    .t-item.done::before{background:#2e7d32}
+    .t-item.warn::before{background:#e53935}
+    .t-item.info::before{background:#1e88e5}
+    .t-time{font-size:12px;color:#666;font-weight:900}
+    .t-text{font-size:13px;font-weight:900}
+    .t-sub{font-size:12px;color:#666}
+
+    /* Follow-up traffic light */
+    .traffic{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .lamp{width:12px;height:12px;border-radius:999px;background:#bbb;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+    .lamp.green{background:#2e7d32}
+    .lamp.yellow{background:#f9a825}
+    .lamp.red{background:#e53935}
+
+    .map{background:#f3f3f3;border:2px dashed #bbb;border-radius:12px;min-height:260px;position:relative;overflow:hidden;aspect-ratio:1/1}
+    .map .txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;color:#777;text-align:center;padding:12px}
+    .map svg{width:100%;height:100%;display:block}
+
+    .foot{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:14px}
+
+
+    /* ===== iPhone/iPad Optimierung ===== */
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+    body{min-height:100vh}
+    button,input,textarea,select{font-size:16px} /* verhindert iOS Auto-Zoom */
+    button{min-height:44px;touch-action:manipulation}
+    .top-actions button{white-space:nowrap}
+    .card,.field,.pillar,.chip,.chip2{touch-action:manipulation}
+    .payload-debug details{margin-top:10px}
+
+    @media (max-width: 900px){
+      body{padding:10px;background:#fff}
+      .app{padding:12px;border-radius:0;box-shadow:none;max-width:none}
+      .topbar{position:sticky;top:0;z-index:20;background:#fff;padding:8px 0 10px;border-bottom:1px solid #e6e6e6;align-items:flex-start}
+      .topbar h1{font-size:17px;line-height:1.25}
+      .top-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .top-actions button{width:100%;padding:11px 10px}
+      .top-actions #btnClose{grid-column:1 / -1}
+      .section-title{border-radius:8px;margin-top:14px}
+      .section-title div{font-size:16px;padding:10px}
+      .grid{gap:10px}
+      .card,.field{padding:10px;border-radius:10px}
+      .pillars{grid-template-columns:1fr !important;gap:8px}
+      .pillar{text-align:left;padding:12px 44px 12px 12px;min-height:48px}
+      .pillar .mini{right:12px;top:50%;transform:translateY(-50%)}
+      .chips{display:grid;grid-template-columns:1fr;gap:8px}
+      .chip,.chip2{display:block;padding:12px;text-align:left}
+      .actor{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .actor .pill{text-align:center;padding:11px 8px}
+      textarea{min-height:90px}
+      .timeline{max-height:50vh;overflow:auto;padding-right:6px}
+      .map{min-height:220px;aspect-ratio:4/3}
+      .foot{display:block}
+      .foot .mono{margin-top:8px;display:block;word-break:break-word}
+    }
+
+    @media (max-width: 430px){
+      body{padding:6px}
+      .app{padding:8px}
+      .top-actions{grid-template-columns:1fr}
+      .top-actions #btnClose{grid-column:auto}
+      .topbar h1{font-size:16px}
+      .subhead{font-size:14px}
+      .hint{font-size:11px}
+      .map{min-height:190px}
+    }
+
+    @media (min-width: 901px) and (max-width: 1180px){
+      body{padding:16px}
+      .app{max-width:100%;padding:18px}
+      .row-2{grid-template-columns:1fr}
+      .top-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+      .top-actions button{width:100%}
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <h1>Ereignismanagement – Workflow (EL/RB)</h1>
+      <div class="top-actions">
+        <button class="btn-secondary" type="button" id="btnLoad">Vorfall laden</button>
+        <button class="btn-primary" type="button" id="btnSave">Speichern / Aktualisieren</button>
+        <button class="btn-danger" type="button" id="btnClose">Vorfall abschliessen</button>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Vorfall – Ereignisbearbeitung</div></div>
+
+    <div class="grid row-2" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Vorfallsdaten</div>
+        <div class="grid row-3">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">IncidentId</div>
+            <input id="incidentId" placeholder="INC-2026-000123" value="INC-2026-000123" />
+            <div class="hint">Eindeutiger Schlüssel (vom Flow)</div>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Ereignis</div>
+            <input id="ereignis" value="Rangierunfall" />
+            <div class="hint">Read-only möglich, kommt aus Meldung</div>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Rolle (wer bearbeitet jetzt)</div>
+            <div class="actor" id="actorSwitch">
+              <div class="pill active" data-actor="EL">Einsatzleitung (EL)</div>
+              <div class="pill" data-actor="RB">Rufbereitschaft (RB)</div>
+            </div>
+            <div class="hint">Status- und Journal-Einträge werden mit dieser Rolle geloggt.</div>
+          </div>
+        </div>
+
+        <div class="grid row-3">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Ort (Modus)</div>
+            <select id="ortModus">
+              <option value="bahnhof">Bahnhof</option>
+              <option value="strecke" selected>Strecke</option>
+              <option value="anschluss">Anschluss</option>
+            </select>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Start / Bahnhof</div>
+            <input id="ortStart" value="ZGO – Zug Oberwil" />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Ziel / Anschluss</div>
+            <input id="ortZiel" value="OL – Oensingen" />
+          </div>
+        </div>
+
+        <div class="grid row-2">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Kurzbeschreibung</div>
+            <textarea id="summary" rows="3">Wagen entgleist im Rangierbereich. Schaden unbekannt. Kunde informiert.</textarea>
+            <div class="hint">Kommt aus Meldung + Updates.</div>
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Karte (Anzeige)</div>
+            <div class="map" id="mapBox"><div class="txt">Karte wird geladen …</div></div>
+            <div class="hint">Quelle: <code>assets/map.svg</code>. Anzeige passt sich an iPhone/iPad an.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title" style="margin-top:0"><div>Mitarbeitende kontaktiert (EL/RB)</div></div>
+        <div class="card active" style="margin-top:14px">
+          <div class="subhead" style="margin-top:0">Kontakte (schnell markieren)</div>
+          <div class="chips" id="contactChips">
+            <div class="chip2" data-key="EL">Einsatzleitung informiert</div>
+            <div class="chip2" data-key="RB">Rufbereitschaft informiert</div>
+            <div class="chip2" data-key="EVU">EVU kontaktiert</div>
+            <div class="chip2" data-key="INF">Infrastruktur kontaktiert</div>
+            <div class="chip2" data-key="KUN">Kunde kontaktiert</div>
+            <div class="chip2" data-key="SICH">Sicherheitsabteilung informiert</div>
+          </div>
+          <div class="hint">Tippen = kontaktiert. Wird in der Chronologie protokolliert (mit Rolle EL/RB).</div>
+
+          <div class="subhead">Zusätzliche Kontaktperson (frei)</div>
+          <div class="grid row-3">
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Name</div>
+              <input id="freeContactName" placeholder="Vorname Nachname" />
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Telefon / Mail</div>
+              <input id="freeContactTel" placeholder="+41 ... / mail@..." />
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Organisation / Rolle</div>
+              <input id="freeContactOrg" placeholder="z.B. Kunde / Leitstelle" />
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <div style="font-weight:900;margin-bottom:6px">Notiz (Kontakt)</div>
+            <textarea id="freeContactNote" rows="3" placeholder="Was wurde besprochen?"></textarea>
+          </div>
+        </div>
+
+        <div class="section-title"><div>Status (EL/RB)</div></div>
+        <div class="card" style="margin-top:14px" id="statusCard">
+          <div class="subhead" style="margin-top:0">Schnellstatus</div>
+          <div class="pillars" id="statusPillars">
+            <div class="pillar active" data-status="eingegangen"><span class="mini badge">1</span>
+              <div class="p-label">Eingangsstatus</div>
+              <div class="p-value">Eingegangen</div>
+            </div>
+            <div class="pillar" data-status="in_bearbeitung"><span class="mini badge">2</span>
+              <div class="p-label">Bearbeitung</div>
+              <div class="p-value">In Bearbeitung</div>
+            </div>
+            <div class="pillar" data-status="beim_kunden"><span class="mini badge">3</span>
+              <div class="p-label">Entscheidung</div>
+              <div class="p-value">Liegt beim Kunden</div>
+            </div>
+            <div class="pillar" data-status="massnahmen_laufen"><span class="mini badge">4</span>
+              <div class="p-label">Massnahmen</div>
+              <div class="p-value">Angesetzt / Laufen</div>
+            </div>
+            <div class="pillar" data-status="abgeschlossen"><span class="mini badge">5</span>
+              <div class="p-label">Abschluss</div>
+              <div class="p-value">Abgeschlossen</div>
+            </div>
+          </div>
+
+          <div class="subhead">Zeitstempel</div>
+          <div class="grid row-3">
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Kunde kontaktiert</div>
+              <input id="tsKunde" type="datetime-local" />
+              <div class="hint">Wird als Timeline-Eintrag geloggt.</div>
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Ausrücken</div>
+              <input id="tsAus" type="datetime-local" />
+            </div>
+            <div class="field">
+              <div style="font-weight:900;margin-bottom:6px">Eintreffen</div>
+              <input id="tsEin" type="datetime-local" />
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:12px">
+            <div style="font-weight:900;margin-bottom:6px">Aktueller Status (Text)</div>
+            <input id="statusText" value="RB ist informiert, erste Abklärungen laufen." />
+            <div class="hint">Kommt in SharePoint Spalte "StatusText".</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Massnahmen & Empfehlungen (aus Meldung übernehmen)</div></div>
+
+    <div class="grid row-2" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Empfohlene Massnahmen (aus Meldung)</div>
+        <div class="chips" id="recChips"></div>
+        <div class="hint">Tippen toggelt: offen → umgesetzt → blockiert → offen. "umgesetzt" wird in Chronologie geloggt.</div>
+
+        <div class="subhead">Umgesetzte Massnahmen (Text / Journal)</div>
+        <div class="field">
+          <textarea id="doneNotes" rows="4" placeholder="z.B. 08:10 Railopsperre gesetzt, 08:15 Kunde informiert"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="subhead" style="margin-top:0">Fall übergeben / Eskalation</div>
+        <div class="grid row-2">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Übergeben an</div>
+            <input id="handoverTo" placeholder="z.B. Sicherheitsabteilung / Kunde / EVU" />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Zeitpunkt</div>
+            <input id="handoverAt" type="datetime-local" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Grund / Status Update</div>
+          <textarea id="handoverReason" rows="6" placeholder="Warum übergeben? Welche nächsten Schritte?"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Erstmeldung abgeschlossen / Entscheidungsgrundlagen</div></div>
+
+    <div class="grid row-3" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Leitstellenadresse (aus Entscheidungsbaum)</div>
+        <div class="field">
+          <div style="font-weight:900;margin-bottom:6px">Leitstellenadresse / Kontakt</div>
+          <textarea id="leitstelle" rows="6" placeholder="Wird aus Entscheidungsbaum übernommen (z.B. E-Mail, Telefon, Adresse)"></textarea>
+          <div class="hint">Ziel: je Ereignisart/Variante/EVU automatisch vorbefüllen.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="subhead" style="margin-top:0">Ansprechpartner vor Ort</div>
+        <div class="field">
+          <div style="font-weight:900;margin-bottom:6px">Name</div>
+          <input id="apName" placeholder="Vorname Nachname" />
+        </div>
+        <div class="grid row-2" style="margin-top:10px">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Telefon</div>
+            <input id="apTel" placeholder="+41 ..." />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Firma / Funktion</div>
+            <input id="apFirma" placeholder="z.B. Kunde / Rangierleiter" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Abmachungen / Entscheide</div>
+          <textarea id="apNotes" rows="5" placeholder="z.B. Kunde entscheidet über..."></textarea>
+        </div>
+      </div>
+
+      <div class="card" id="followCard">
+        <div class="subhead" style="margin-top:0">
+          <div class="traffic">
+            <span id="followLamp" class="lamp"></span>
+            <span>Nachfassen – Kunde reagiert bisher nicht</span>
+            <span class="badge" id="followBadge">—</span>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:0">
+          Erstmeldung und Ereignisbearbeitung durch MEV abgeschlossen. Dieses Feld dient dem Nachfassen bei ausstehenden Kundenentscheiden.
+        </div>
+
+        <div class="grid row-2" style="margin-top:10px">
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Letztes Nachfassen</div>
+            <input id="followLast" type="datetime-local" />
+          </div>
+          <div class="field">
+            <div style="font-weight:900;margin-bottom:6px">Nächstes Nachfassen (automatisch +7 Tage)</div>
+            <input id="followNext" type="datetime-local" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Status / Ergebnis</div>
+          <textarea id="followNote" rows="5" placeholder="z.B. Kunde reagiert nicht seit 14 Tagen, Erinnerung per Mail gesendet."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;justify-content:flex-end">
+          <button type="button" class="btn-secondary" id="btnFollowResolve">Kunde hat reagiert (Nachfassen beenden)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><div>Verlauf (Timeline / Journal)</div></div>
+
+    <div class="grid row-2" style="margin-top:14px">
+      <div class="card active">
+        <div class="subhead" style="margin-top:0">Chronologie</div>
+        <div class="timeline" id="timeline"></div>
+        <div class="hint">In echt: append-only Journal in SharePoint (IncidentLog oder JSON-Dateien pro Eintrag).</div>
+      </div>
+
+      <div class="card">
+        <div class="subhead" style="margin-top:0">Technik / Sync</div>
+        <div class="field">
+          <div style="font-weight:900;margin-bottom:6px">Letzte Synchronisation</div>
+          <div class="mono" id="syncInfo">—</div>
+          <div class="hint">Antwort vom Flow (UpdateIncident) hier anzeigen.</div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <div style="font-weight:900;margin-bottom:6px">Payload Vorschau (Demo)</div>
+          <textarea class="mono" id="payloadPreview" rows="18" spellcheck="false"></textarea>
+          <div class="hint">Nur zur Demonstration / Debug (später ausblenden).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="hint">v4: Status ↔ Nachfassen gekoppelt + Nachfassen-Ampel.</div>
+      <div class="mono">GitHub Pages ready (statisch) · später: GetIncident/UpdateIncident via Power Automate</div>
+    </div>
+  </div>
+
+  <script>
+    const statusPillars = document.getElementById('statusPillars');
+    const recChips = document.getElementById('recChips');
+    const contactChips = document.getElementById('contactChips');
+    const payloadPreview = document.getElementById('payloadPreview');
+    const syncInfo = document.getElementById('syncInfo');
+    const actorSwitch = document.getElementById('actorSwitch');
+    const timeline = document.getElementById('timeline');
+
+    const followLast = document.getElementById('followLast');
+    const followNext = document.getElementById('followNext');
+    const followNote = document.getElementById('followNote');
+    const followLamp = document.getElementById('followLamp');
+    const followBadge = document.getElementById('followBadge');
+    const btnFollowResolve = document.getElementById('btnFollowResolve');
+
+    const state = {
+      actor: 'EL',
+      timeline: [],
+      recommended: [
+        {key:'KUN', label:'KUN – Kunde informieren', status:'offen'},
+        {key:'FOT', label:'FOT – Fotos aufnehmen', status:'offen'},
+        {key:'SIC', label:'SIC – Ereignisort sichern', status:'offen'},
+        {key:'DOK', label:'DOK – Dokumentation / Protokoll', status:'offen'},
+        {key:'ROS', label:'ROS – Railopsperre', status:'offen'}
+      ]
+    };
+
+    function escapeHtml(s){
+      return String(s||'')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#39;');
+    }
+
+    function nowTime(){
+      return new Date().toLocaleString('de-CH');
+    }
+
+    function addTimeline(kind, text, sub, cls){
+      state.timeline.unshift({t: new Date().toISOString(), kind, text, sub, cls: cls||'info', actor: state.actor});
+      renderTimeline();
+    }
+
+    function renderTimeline(){
+      timeline.innerHTML = '';
+      if(state.timeline.length === 0){
+        const d = document.createElement('div');
+        d.className = 't-item info';
+        d.innerHTML = `<div class="t-time">—</div><div class="t-text">Noch keine Einträge</div><div class="t-sub">Beim Speichern werden Änderungen geloggt.</div>`;
+        timeline.appendChild(d);
+        return;
+      }
+      state.timeline.forEach(item => {
+        const el = document.createElement('div');
+        el.className = `t-item ${item.cls}`;
+        const when = new Date(item.t).toLocaleString('de-CH');
+        el.innerHTML = `
+          <div class="t-time">${when} · ${item.actor}</div>
+          <div class="t-text">${escapeHtml(item.text)}</div>
+          <div class="t-sub">${escapeHtml(item.sub||'')}</div>
+        `;
+        timeline.appendChild(el);
+      });
+    }
+
+    function activeStatus(){
+      return statusPillars.querySelector('.pillar.active')?.dataset.status || 'eingegangen';
+    }
+
+    function labelStatus(s){
+      return ({
+        eingegangen:'Eingegangen',
+        in_bearbeitung:'In Bearbeitung',
+        beim_kunden:'Liegt beim Kunden',
+        massnahmen_laufen:'Massnahmen laufen',
+        abgeschlossen:'Abgeschlossen'
+      })[s] || s;
+    }
+
+    function setStatus(statusKey, silent){
+      const target = statusPillars.querySelector(`.pillar[data-status="${statusKey}"]`);
+      if(!target) return;
+      const prev = activeStatus();
+      [...statusPillars.querySelectorAll('.pillar')].forEach(x=>x.classList.toggle('active', x===target));
+      const next = activeStatus();
+      if(!silent && prev !== next){
+        addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus(next)}`, '', 'info');
+      }
+      renderPreview();
+    }
+
+    // ===== Follow-up defaults: +7 Tage =====
+    function setFollowupDefault(){
+      if(!followNext || followNext.value) return;
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      followNext.value = d.toISOString().slice(0,16);
+    }
+
+    // ===== Follow-up active? =====
+    function followupActive(){
+      const a = (followLast?.value||'').trim();
+      const b = (followNext?.value||'').trim();
+      const c = (followNote?.value||'').trim();
+      return !!(a || b || c);
+    }
+
+    // ===== Ampel =====
+    function setLamp(cls){
+      followLamp.classList.remove('green','yellow','red');
+      if(cls) followLamp.classList.add(cls);
+    }
+
+    function updateFollowupUi(){
+      setFollowupDefault();
+
+      // Status-Kopplung: sobald Nachfassen aktiv und nicht abgeschlossen -> Status beim Kunden
+      if(followupActive() && activeStatus() !== 'abgeschlossen'){
+        if(activeStatus() !== 'beim_kunden'){
+          setStatus('beim_kunden', true);
+          addTimeline('auto', 'Status automatisch gesetzt: Liegt beim Kunden', 'Grund: Nachfassen aktiv', 'info');
+        }
+      }
+
+      // Ampel-Logik
+      const nextStr = (followNext?.value||'').trim();
+      const note = (followNote?.value||'').trim();
+
+      if(!followupActive()){
+        setLamp('green');
+        followBadge.textContent = 'Kein Nachfassen offen';
+        return;
+      }
+
+      // Wenn ein nächstes Nachfassen gesetzt ist
+      if(nextStr){
+        const next = new Date(nextStr);
+        const now = new Date();
+        if(isNaN(next.getTime())){
+          setLamp('yellow');
+          followBadge.textContent = 'Nachfassen geplant';
+          return;
+        }
+        if(next < now){
+          setLamp('red');
+          followBadge.textContent = 'Überfällig';
+        } else {
+          // gelb wenn geplant / grün wenn "Ergebnis" notiert? -> wir bleiben gelb (aktiv, aber nicht überfällig)
+          setLamp('yellow');
+          const days = Math.ceil((next - now) / (1000*60*60*24));
+          followBadge.textContent = `Nächstes Nachfassen in ${days} Tag(en)`;
+        }
+      } else {
+        setLamp('yellow');
+        followBadge.textContent = 'Nachfassen aktiv';
+      }
+
+      // optionaler Hinweis in Badge wenn Note existiert
+      if(note && followBadge.textContent.indexOf('·')<0){
+        followBadge.textContent += ' · Notiz vorhanden';
+      }
+    }
+
+    // Nachfassen beenden: Felder leeren + Status zurück auf In Bearbeitung (sofern nicht abgeschlossen)
+    btnFollowResolve.addEventListener('click', ()=>{
+      const wasActive = followupActive();
+      followLast.value = '';
+      followNote.value = '';
+      // next bleibt bewusst leer, wird beim nächsten Aktivieren wieder +7 gesetzt
+      followNext.value = '';
+      updateFollowupUi();
+
+      if(wasActive){
+        addTimeline('follow', 'Nachfassen beendet: Kunde hat reagiert', 'Nachfassen-Felder zurückgesetzt', 'done');
+      }
+
+      if(activeStatus() !== 'abgeschlossen'){
+        setStatus('in_bearbeitung', true);
+        addTimeline('status', 'Status gesetzt: In Bearbeitung', 'Kunde hat reagiert', 'info');
+      }
+      renderPreview();
+    });
+
+    // Actor switch
+    actorSwitch.addEventListener('click', (e)=>{
+      const pill = e.target.closest('.pill');
+      if(!pill) return;
+      state.actor = pill.dataset.actor;
+      [...actorSwitch.querySelectorAll('.pill')].forEach(p=>p.classList.toggle('active', p===pill));
+      addTimeline('actor', 'Bearbeitung gewechselt', `Aktuell: ${state.actor}`, 'info');
+      renderPreview();
+    });
+
+    // Status pillars (manuell)
+    statusPillars.addEventListener('click', (e)=>{
+      const p = e.target.closest('.pillar');
+      if(!p) return;
+      const prev = activeStatus();
+      [...statusPillars.querySelectorAll('.pillar')].forEach(x=>x.classList.toggle('active', x===p));
+      const next = activeStatus();
+      if(prev !== next){
+        addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus(next)}`, '', 'info');
+      }
+      // Wenn Nachfassen aktiv, erzwinge beim Kunden (ausser abgeschlossen)
+      updateFollowupUi();
+      renderPreview();
+    });
+
+    // Contacts chips
+    contactChips.addEventListener('click', (e)=>{
+      const c = e.target.closest('.chip2');
+      if(!c) return;
+      const was = c.classList.contains('done');
+      c.classList.toggle('done');
+      if(!was){
+        addTimeline('kontakt', `Kontakt: ${c.textContent.trim()}`, 'kontaktiert / informiert', 'done');
+      } else {
+        addTimeline('kontakt', `Kontakt entfernt: ${c.textContent.trim()}`, 'Markierung zurückgenommen', 'warn');
+      }
+      // Wenn Kunde kontaktiert (Chip) aktiv, kann Nachfassen optional als erledigt betrachtet werden – wir lassen es bewusst offen.
+      renderPreview();
+    });
+
+    // Massnahmen chips
+    function renderRecChips(){
+      recChips.innerHTML = '';
+      state.recommended.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'chip' + (m.status==='umgesetzt' ? ' done' : m.status==='blockiert' ? ' blocked' : '');
+        div.dataset.key = m.key;
+        div.textContent = m.label;
+        recChips.appendChild(div);
+      });
+    }
+
+    recChips.addEventListener('click', (e)=>{
+      const c = e.target.closest('.chip');
+      if(!c) return;
+      const key = c.dataset.key;
+      const m = state.recommended.find(x=>x.key===key);
+      if(!m) return;
+      const prev = m.status;
+      m.status = (m.status==='offen') ? 'umgesetzt' : (m.status==='umgesetzt') ? 'blockiert' : 'offen';
+      renderRecChips();
+      if(prev !== m.status){
+        const cls = m.status==='umgesetzt' ? 'done' : (m.status==='blockiert' ? 'warn' : 'info');
+        addTimeline('massnahme', `Massnahme ${m.key}: ${prev} → ${m.status}`, m.label, cls);
+        if(m.key==='KUN' && m.status==='umgesetzt') addTimeline('kunde', 'Kunde informiert', 'aus Massnahme KUN', 'done');
+        if(m.key==='ROS' && m.status==='umgesetzt') addTimeline('rail', 'Railopsperre erledigt', 'aus Massnahme ROS', 'done');
+      }
+      renderPreview();
+    });
+
+    // Follow-up input listeners
+    [followLast, followNext, followNote].forEach(el=>{
+      el.addEventListener('input', ()=>{ updateFollowupUi(); renderPreview(); });
+      el.addEventListener('change', ()=>{ updateFollowupUi(); renderPreview(); });
+    });
+
+    // Collect UI
+    function collectUI(){
+      const rec = state.recommended.map(x=>({key:x.key,label:x.label,status:x.status}));
+      const contacts = [...contactChips.querySelectorAll('.chip2')].map(c=>({
+        key: c.dataset.key,
+        label: c.textContent.trim(),
+        kontaktiert: c.classList.contains('done')
+      }));
+
+      return {
+        incidentId: document.getElementById('incidentId').value.trim(),
+        actor: state.actor,
+        status: activeStatus(),
+        statusText: document.getElementById('statusText').value.trim(),
+        ort: {
+          modus: document.getElementById('ortModus').value,
+          start: document.getElementById('ortStart').value.trim(),
+          ziel: document.getElementById('ortZiel').value.trim(),
+        },
+        zeiten: {
+          kundeKontaktiert: document.getElementById('tsKunde').value,
+          ausruecken: document.getElementById('tsAus').value,
+          eintreffen: document.getElementById('tsEin').value,
+        },
+        kontakte: {
+          standard: contacts,
+          frei: {
+            name: document.getElementById('freeContactName').value.trim(),
+            tel: document.getElementById('freeContactTel').value.trim(),
+            org: document.getElementById('freeContactOrg').value.trim(),
+            note: document.getElementById('freeContactNote').value.trim(),
+          }
+        },
+        massnahmen: {
+          empfohlen: rec,
+          umgesetztNotiz: document.getElementById('doneNotes').value.trim(),
+        },
+        handover: {
+          to: document.getElementById('handoverTo').value.trim(),
+          at: document.getElementById('handoverAt').value,
+          reason: document.getElementById('handoverReason').value.trim(),
+        },
+        leitstelle: document.getElementById('leitstelle').value.trim(),
+        ansprechpartner: {
+          name: document.getElementById('apName').value.trim(),
+          tel: document.getElementById('apTel').value.trim(),
+          firma: document.getElementById('apFirma').value.trim(),
+          notes: document.getElementById('apNotes').value.trim(),
+        },
+        followup: {
+          active: followupActive(),
+          last: followLast.value,
+          next: followNext.value,
+          note: followNote.value.trim(),
+          ampelfarbe: followLamp.classList.contains('red') ? 'rot' : followLamp.classList.contains('yellow') ? 'gelb' : 'gruen'
+        },
+        timeline: state.timeline,
+        meta: { erzeugtAm: new Date().toISOString(), client: 'workflow_mockup_el_rb_v4' }
+      };
+    }
+
+    function renderPreview(){
+      payloadPreview.value = JSON.stringify(collectUI(), null, 2);
+    }
+
+    // Buttons
+    document.getElementById('btnSave').addEventListener('click', ()=>{
+      // Log key timestamp fields if set
+      const tsK = document.getElementById('tsKunde').value;
+      const tsA = document.getElementById('tsAus').value;
+      const tsE = document.getElementById('tsEin').value;
+      if(tsK) addTimeline('zeit', 'Zeit: Kunde kontaktiert', tsK, 'done');
+      if(tsA) addTimeline('zeit', 'Zeit: Ausrücken', tsA, 'done');
+      if(tsE) addTimeline('zeit', 'Zeit: Eintreffen', tsE, 'done');
+
+      // Free contact
+      const fcN = document.getElementById('freeContactName').value.trim();
+      const fcT = document.getElementById('freeContactTel').value.trim();
+      const fcO = document.getElementById('freeContactOrg').value.trim();
+      const fcNote = document.getElementById('freeContactNote').value.trim();
+      if(fcN || fcT || fcO || fcNote){
+        addTimeline('kontakt', 'Kontaktperson erfasst', `${fcN || '—'} · ${fcO || '—'} · ${fcT || '—'} · ${fcNote}`, 'done');
+      }
+
+      // Handover
+      const hoTo = document.getElementById('handoverTo').value.trim();
+      const hoAt = document.getElementById('handoverAt').value;
+      const hoReason = document.getElementById('handoverReason').value.trim();
+      if(hoTo || hoAt || hoReason){
+        addTimeline('handover', 'Fall übergeben / Eskalation', `${hoTo || '—'} · ${hoAt || '—'} · ${hoReason || ''}`.trim(), 'info');
+      }
+
+      // Follow-up log (if active)
+      if(followupActive()){
+        addTimeline('follow', 'Nachfassen aktualisiert', `${followLast.value || '—'} → ${followNext.value || '—'} · ${followNote.value.trim() || ''}`.trim(), followLamp.classList.contains('red') ? 'warn' : 'info');
+      }
+
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: würde jetzt UpdateIncident-Flow aufrufen (HTTP POST) · ' + nowTime();
+      alert('Demo: Speichern würde jetzt den Vorfall in SharePoint aktualisieren.');
+    });
+
+    document.getElementById('btnLoad').addEventListener('click', ()=>{
+      addTimeline('load', 'Vorfall geladen', 'Demo: Daten würden aus SharePoint kommen', 'info');
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: würde jetzt GetIncident-Flow aufrufen · ' + nowTime();
+      alert('Demo: Laden würde jetzt Daten aus SharePoint holen und das Formular befüllen.');
+    });
+
+    document.getElementById('btnClose').addEventListener('click', ()=>{
+      const prev = activeStatus();
+      setStatus('abgeschlossen', true);
+      addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus('abgeschlossen')}`, 'Abschluss ausgelöst', 'done');
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: Abschluss würde jetzt Status=Abgeschlossen setzen · ' + nowTime();
+      alert('Demo: Abschliessen würde jetzt den Vorfall abschliessen (Status/Metadaten)');
+    });
+
+    // Init baseline
+    function initBaseline(){
+      state.timeline = [
+        {t:new Date(Date.now()-45*60*1000).toISOString(), actor:'EL', cls:'done', kind:'create', text:'Meldung erfasst (Einsatzleitung)', sub:'ZGO → OL · Fotos: 2'},
+        {t:new Date(Date.now()-37*60*1000).toISOString(), actor:'EL', cls:'done', kind:'kontakt', text:'Kunde kontaktiert', sub:'Telefon / Mail (Demo)'},
+        {t:new Date(Date.now()-32*60*1000).toISOString(), actor:'EL', cls:'done', kind:'kontakt', text:'RB informiert', sub:'Übernahme bestätigt'},
+        {t:new Date(Date.now()-20*60*1000).toISOString(), actor:'RB', cls:'info', kind:'status', text:'Status: In Bearbeitung', sub:'Erste Abklärungen laufen'}
+      ];
+    }
+
+    // Fix for accidental True in JS from python generation
+  </script>
+  <script>
+    // --- kleine Korrektur: setStatus('abgeschlossen', true) beim Abschliessen ---
+    // (zweites Script, damit die HTML robust bleibt)
+    // Init
+    initBaseline();
+    renderRecChips();
+    renderTimeline();
+    setFollowupDefault();
+    updateFollowupUi();
+    renderPreview();
+
+    // Patch: override btnClose handler with correct boolean
+    document.getElementById('btnClose').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const prev = activeStatus();
+      setStatus('abgeschlossen', true);
+      addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus('abgeschlossen')}`, 'Abschluss ausgelöst', 'done');
+      updateFollowupUi();
+      renderPreview();
+      syncInfo.textContent = 'Demo: Abschluss würde jetzt Status=Abgeschlossen setzen · ' + nowTime();
+      alert('Demo: Abschliessen würde jetzt den Vorfall abschliessen (Status/Metadaten)');
+    }, {once:true});
+  </script>
+
+
+  <script>
+    /* =========================================================
+       SharePoint-/Power-Automate-Anbindung
+       - SAVE_FLOW_URL: bestehender Upsert-Flow Ereignisliste neu
+       - LOAD_FLOW_URL: optionaler Abruf-Flow, sobald vorhanden
+       - Entfernt Demo-Buttonhandler durch Button-Klonen und ersetzt sie
+    ========================================================= */
+    (() => {
+      const SAVE_FLOW_URL = 'HIER_DEINE_SAVE_FLOW_HTTP_URL_EINFUEGEN';
+      const LOAD_FLOW_URL = 'HIER_DEINE_LOAD_FLOW_HTTP_URL_EINFUEGEN';
+      const MAP_URL = 'assets/map.svg';
+      const SAVE_ENABLED = SAVE_FLOW_URL && !SAVE_FLOW_URL.includes('HIER_DEINE_SAVE_FLOW_HTTP_URL');
+      const LOAD_ENABLED = LOAD_FLOW_URL && !LOAD_FLOW_URL.includes('HIER_DEINE_LOAD_FLOW_HTTP_URL');
+
+      const pad2 = (n)=> String(n).padStart(2,'0');
+      const isoLocalNow = ()=>{
+        const d = new Date();
+        return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      };
+
+      function postJson(url, body){
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }).then(async res => {
+          const txt = await res.text();
+          let json = null;
+          try{ json = txt ? JSON.parse(txt) : null; }catch(_){ json = null; }
+          if(!res.ok){
+            throw new Error(`HTTP ${res.status} ${txt || res.statusText}`);
+          }
+          return json || { ok:true, raw:txt };
+        });
+      }
+
+      function makeId(){
+        const d = new Date();
+        return `EVT-WF-${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+      }
+
+      function getQuery(){
+        return new URLSearchParams(window.location.search || '');
+      }
+
+      function ensureIncidentId(){
+        const el = document.getElementById('incidentId');
+        const q = getQuery();
+        const fromUrl = q.get('ereignisId') || q.get('incidentId') || q.get('id');
+        if(el && fromUrl && (!el.value || el.value === 'INC-2026-000123')) el.value = fromUrl;
+        if(el && !el.value.trim()) el.value = makeId();
+        return (el?.value || makeId()).trim();
+      }
+
+      function downloadWorkflowJson(obj){
+        const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
+        const a = document.createElement('a');
+        const id = ensureIncidentId().replace(/[^a-zA-Z0-9_-]+/g,'_');
+        a.href = URL.createObjectURL(blob);
+        a.download = `workflow_${id}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+      }
+
+      function buildWorkflowPayload(){
+        const id = ensureIncidentId();
+        const payload = collectUI();
+        payload.incidentId = id;
+        payload.meta = {
+          ...(payload.meta || {}),
+          schema: 'mev-workflow-el-rb-v1',
+          quelle: 'workflow_el_rb',
+          ereignisId: id,
+          letzteAenderung: new Date().toISOString(),
+          client: 'workflow_mockup_el_rb_v4_sharepoint'
+        };
+        return payload;
+      }
+
+      function setVal(id, value){
+        const el = document.getElementById(id);
+        if(!el || value == null) return;
+        el.value = String(value);
+        el.dispatchEvent(new Event('input', { bubbles:true }));
+        el.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+
+      function stationText(st){
+        if(!st) return '';
+        if(typeof st === 'string') return st;
+        const code = st.code || '';
+        const label = st.label || st.name || '';
+        return code && label ? `${code} – ${label}` : (label || code || '');
+      }
+
+      function applyStatus(status){
+        if(!status) return;
+        if(typeof setStatus === 'function') setStatus(status, true);
+      }
+
+      function setContactChips(contacts){
+        if(!Array.isArray(contacts)) return;
+        const byKey = new Map(contacts.map(c => [c.key, !!c.kontaktiert]));
+        document.querySelectorAll('#contactChips .chip2').forEach(chip => {
+          if(byKey.has(chip.dataset.key)) chip.classList.toggle('done', byKey.get(chip.dataset.key));
+        });
+      }
+
+      function setRecommended(listOrObject){
+        if(Array.isArray(listOrObject)){
+          state.recommended = listOrObject.map(x => ({
+            key: x.key || x.code || x.label || 'MASS',
+            label: x.label || x.text || x.key || 'Massnahme',
+            status: x.status || 'offen'
+          }));
+          renderRecChips();
+          return;
+        }
+        if(listOrObject && typeof listOrObject === 'object'){
+          const keys = Object.keys(listOrObject).filter(k => listOrObject[k] === true || listOrObject[k]);
+          if(keys.length){
+            state.recommended = keys.map(k => ({ key:k, label:`${k} – empfohlen`, status:'offen' }));
+            renderRecChips();
+          }
+        }
+      }
+
+      function extractPayloadFromResponse(data){
+        let raw = data?.payload || data?.item?.payload || data?.PayloadJson || data?.payloadJson;
+        if(!raw && Array.isArray(data?.items) && data.items.length){
+          raw = data.items[0].payload || data.items[0].payloadJson || data.items[0].PayloadJson;
+        }
+        if(!raw && data?.item) raw = data.item;
+        if(typeof raw === 'string'){
+          try{ return JSON.parse(raw); }catch(_){ return null; }
+        }
+        if(raw && typeof raw === 'object') return raw;
+        return null;
+      }
+
+      function applyWorkflowPayload(payload){
+        if(!payload || typeof payload !== 'object'){
+          alert('Keine gültigen Ereignisdaten gefunden.');
+          return;
+        }
+
+        // Fall A: Payload aus dieser Workflow-App
+        setVal('incidentId', payload.incidentId || payload.meta?.ereignisId || payload.ereignisId || '');
+        setVal('ereignis', payload.ereignis || payload.ereignisText || payload.ereignis?.ev_text || payload.ereignis?.evText || '');
+        if(payload.status) applyStatus(payload.status);
+        setVal('statusText', payload.statusText || '');
+        if(payload.ort){
+          setVal('ortModus', payload.ort.modus || '');
+          setVal('ortStart', payload.ort.start || stationText(payload.ort.bahnhof) || stationText(payload.ort.startStation));
+          setVal('ortZiel', payload.ort.ziel || stationText(payload.ort.zielStation));
+        }
+        if(payload.zeiten){
+          setVal('tsKunde', payload.zeiten.kundeKontaktiert || '');
+          setVal('tsAus', payload.zeiten.ausruecken || '');
+          setVal('tsEin', payload.zeiten.eintreffen || '');
+        }
+        if(payload.kontakte){
+          setContactChips(payload.kontakte.standard);
+          setVal('freeContactName', payload.kontakte.frei?.name || '');
+          setVal('freeContactTel', payload.kontakte.frei?.tel || '');
+          setVal('freeContactOrg', payload.kontakte.frei?.org || '');
+          setVal('freeContactNote', payload.kontakte.frei?.note || '');
+        }
+        if(payload.massnahmen){
+          setRecommended(payload.massnahmen.empfohlen);
+          setVal('doneNotes', payload.massnahmen.umgesetztNotiz || '');
+        }
+        if(payload.handover){
+          setVal('handoverTo', payload.handover.to || '');
+          setVal('handoverAt', payload.handover.at || '');
+          setVal('handoverReason', payload.handover.reason || '');
+        }
+        setVal('leitstelle', payload.leitstelle || '');
+        if(payload.ansprechpartner){
+          setVal('apName', payload.ansprechpartner.name || '');
+          setVal('apTel', payload.ansprechpartner.tel || '');
+          setVal('apFirma', payload.ansprechpartner.firma || '');
+          setVal('apNotes', payload.ansprechpartner.notes || '');
+        }
+        if(payload.followup){
+          setVal('followLast', payload.followup.last || '');
+          setVal('followNext', payload.followup.next || '');
+          setVal('followNote', payload.followup.note || '');
+        }
+        if(Array.isArray(payload.timeline)){
+          state.timeline = payload.timeline;
+          renderTimeline();
+        }
+
+        // Fall B: Payload direkt aus Ereignismelde-App
+        if(payload.ereignis && (payload.ereignis.ev_text || payload.ereignis.var_text || payload.entscheidungen)){
+          setVal('incidentId', payload.meta?.ereignisId || payload.ereignisId || payload.incidentId || ensureIncidentId());
+          setVal('ereignis', [payload.ereignis.ev_text, payload.ereignis.var_text].filter(Boolean).join(' – '));
+          setVal('summary', payload.ereignis.bemerkungen || '');
+          const o = payload.ereignis.ort || {};
+          setVal('ortModus', o.modus || '');
+          if(o.modus === 'strecke'){
+            setVal('ortStart', stationText(o.start));
+            setVal('ortZiel', stationText(o.ziel));
+          }else if(o.modus === 'bahnhof'){
+            setVal('ortStart', stationText(o.bahnhof));
+            setVal('ortZiel', stationText(o.zugziel));
+          }else if(o.modus === 'anschluss'){
+            setVal('ortStart', stationText(o.anschluss));
+            setVal('ortZiel', o.anschlussText || '');
+          }
+          setRecommended(payload.entscheidungen?.massnahmen_empfohlen);
+          setVal('doneNotes', payload.entscheidungen?.massnahmen_text || '');
+          addTimeline('load', 'Ereignismeldung übernommen', payload.meta?.ereignisId || '', 'info');
+        }
+
+        updateFollowupUi();
+        renderPreview();
+        syncInfo.textContent = 'Geladen / übernommen · ' + nowTime();
+      }
+
+      async function saveWorkflow(){
+        const tsK = document.getElementById('tsKunde').value;
+        const tsA = document.getElementById('tsAus').value;
+        const tsE = document.getElementById('tsEin').value;
+        if(tsK) addTimeline('zeit', 'Zeit: Kunde kontaktiert', tsK, 'done');
+        if(tsA) addTimeline('zeit', 'Zeit: Ausrücken', tsA, 'done');
+        if(tsE) addTimeline('zeit', 'Zeit: Eintreffen', tsE, 'done');
+        updateFollowupUi();
+
+        const payload = buildWorkflowPayload();
+        renderPreview();
+
+        if(!SAVE_ENABLED){
+          downloadWorkflowJson(payload);
+          syncInfo.textContent = 'Kein SAVE_FLOW_URL gesetzt – JSON lokal exportiert · ' + nowTime();
+          alert('Keine Save-Flow-URL gesetzt. JSON wurde lokal exportiert.');
+          return;
+        }
+
+        try{
+          const res = await postJson(SAVE_FLOW_URL, {
+            action: 'upsert',
+            ereignisId: payload.incidentId,
+            payload
+          });
+          syncInfo.textContent = `SharePoint gespeichert · ${nowTime()} · ${JSON.stringify(res)}`;
+          alert('Workflow in SharePoint gespeichert / aktualisiert.');
+        }catch(err){
+          console.error(err);
+          downloadWorkflowJson(payload);
+          syncInfo.textContent = 'SharePoint-Speicherung fehlgeschlagen – JSON exportiert · ' + nowTime();
+          alert('SharePoint-Speicherung fehlgeschlagen. JSON wurde lokal exportiert.\n\n' + err.message);
+        }
+      }
+
+      async function loadWorkflow(){
+        const id = ensureIncidentId();
+        if(!LOAD_ENABLED){
+          const txt = prompt('Noch keine LOAD_FLOW_URL gesetzt. Du kannst testweise PayloadJson aus SharePoint hier einfügen:');
+          if(!txt) return;
+          try{ applyWorkflowPayload(JSON.parse(txt)); }
+          catch(err){ alert('PayloadJson konnte nicht gelesen werden: ' + err.message); }
+          return;
+        }
+        try{
+          const res = await postJson(LOAD_FLOW_URL, { action:'get', ereignisId:id, limit:1 });
+          const payload = extractPayloadFromResponse(res);
+          applyWorkflowPayload(payload);
+        }catch(err){
+          console.error(err);
+          alert('Laden aus SharePoint fehlgeschlagen:\n\n' + err.message);
+        }
+      }
+
+      async function closeWorkflow(){
+        const prev = activeStatus();
+        setStatus('abgeschlossen', true);
+        addTimeline('status', `Status geändert: ${labelStatus(prev)} → ${labelStatus('abgeschlossen')}`, 'Abschluss ausgelöst', 'done');
+        updateFollowupUi();
+        await saveWorkflow();
+      }
+
+
+      async function loadMapSvg(){
+        const box = document.getElementById('mapBox');
+        if(!box) return;
+        try{
+          const res = await fetch(MAP_URL, {cache:'no-store'});
+          if(!res.ok) throw new Error('HTTP ' + res.status);
+          const svg = await res.text();
+          box.innerHTML = svg;
+          const svgEl = box.querySelector('svg');
+          if(svgEl){
+            svgEl.setAttribute('preserveAspectRatio','xMidYMid meet');
+            svgEl.style.width = '100%';
+            svgEl.style.height = '100%';
+          }
+        }catch(err){
+          box.innerHTML = '<div class="txt">map.svg konnte nicht geladen werden.<br>Lege die Datei unter assets/map.svg ab.</div>';
+          console.warn('map.svg konnte nicht geladen werden:', err);
+        }
+      }
+
+      function replaceButton(id, handler){
+        const old = document.getElementById(id);
+        if(!old) return;
+        const clone = old.cloneNode(true);
+        old.parentNode.replaceChild(clone, old);
+        clone.addEventListener('click', handler);
+      }
+
+      replaceButton('btnSave', saveWorkflow);
+      replaceButton('btnLoad', loadWorkflow);
+      replaceButton('btnClose', closeWorkflow);
+
+      // URL-Prefill: ?ereignisId=... öffnet direkt mit dieser ID.
+      ensureIncidentId();
+      loadMapSvg();
+      renderPreview();
+    })();
+  </script>
+
+</body>
+</html>
